@@ -8,17 +8,8 @@ def chunk_documents(docs, language, chunk_size=1000, chunk_overlap=200):
             start_index = 0
             chunk_count = 0
             if lang == language:
-                # ★ 新增：依語言調整實際使用的 chunk 參數
-                if lang == 'zh':
-                    effective_chunk_size = 200
-                    effective_chunk_overlap = 50
-                else:
-                    effective_chunk_size = chunk_size
-                    effective_chunk_overlap = chunk_overlap
-
-                # 下面這段基本上跟原本一樣，只是用 effective_* 取代
                 while start_index < text_len:
-                    end_index = min(start_index + effective_chunk_size, text_len)
+                    end_index = min(start_index + chunk_size, text_len)
                     chunk_metadata = doc.copy()
                     chunk_metadata.pop('content', None)
                     chunk_metadata['chunk_index'] = chunk_count
@@ -27,6 +18,6 @@ def chunk_documents(docs, language, chunk_size=1000, chunk_overlap=200):
                         'metadata': chunk_metadata
                     }
                     chunks.append(chunk)
-                    start_index += effective_chunk_size - effective_chunk_overlap
+                    start_index += chunk_size - chunk_overlap
                     chunk_count += 1
     return chunks
