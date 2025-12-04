@@ -9,6 +9,11 @@ DB_PATH = 'db/dataset.db'
 DATASET_PATH = 'dragonball_dataset/dragonball_docs.jsonl'
 SPECIAL_DATASET_PATH = 'db/special_dataset.jsonl'
 
+def create_tables():
+    conn = Connection(DB_PATH)
+    conn.execute("DROP TABLE IF EXISTS documents")
+    create_table_from_yaml(SCHEMA_PATH, DB_PATH)
+
 def main(docs_path):
     create_tables()
     populate_documents(docs_path)
