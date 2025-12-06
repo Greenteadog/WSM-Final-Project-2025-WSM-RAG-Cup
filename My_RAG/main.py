@@ -1,6 +1,7 @@
 from tqdm import tqdm
 from utils import load_jsonl, save_jsonl
 from chunker import chunk_documents
+from runtime_chunker import chunk_row_chunks
 from retriever import create_retriever, get_chunks_from_db
 from generator import generate_answer
 import argparse
@@ -21,9 +22,8 @@ def main(query_path, docs_path, language, output_path):
         # 1. Route query
         print("Routing query[{}]...".format(query['query']['query_id']))
         query_text = query['query']['content']
-        prediction, doc_id = router(query, language) # prediction: domain, doc_id: list of doc_id
-        print("prediction: {}".format(prediction))
-        print("doc_id: {}".format(doc_id))
+        prediction, doc_id, doc_names = router(query, language)
+
         # 2. Retrieve relevant chunks(use embedding retriever)
         print("Retrieving chunks...")
         # if (doc_id):
@@ -36,14 +36,55 @@ def main(query_path, docs_path, language, output_path):
         # 2. Retrieve relevant chunks(use BM25)
         row_chunks = get_chunks_from_db(prediction, doc_id, language)
         retriever = create_retriever(row_chunks, language)
-        retrieved_chunks = retriever.retrieve(query_text, top_k=5)
+        
+        print("[1]first retrieve for query: {}".format(query_text))
+        retrieved_chunks = retriever.retrieve(query_text, top_k=1)
 
+        small_chunks = chunk_row_chunks(retrieved_chunks, language)
+        if (doc_names):
+            for doc_name in doc_names:
+                query_text = query_text.replace(doc_name, "")
+        small_retrieved_chunks = []
+        for index, chunk in enumerate(small_chunks):
+            if (doc_names):
+                for doc_name in doc_names:
+                    small_retrieved_chunks.append({
+                        "page_content": chunk['page_content'].replace(doc_name, ""),
+                        "chunk_index": index
+                    })
+            else:
+                small_retrieved_chunks.append({
+                    "page_content": chunk['page_content'],
+                    "chunk_index": index
+                })
+
+        print("[2]second retrieve for query: {}".format(query_text))
+        retriever_2 = create_retriever(small_retrieved_chunks, language)
+        retrieved_small_chunks = retriever_2.retrieve(query_text, top1_check=True)
+        return_chunks = []
+        for index, chunk in enumerate(retrieved_small_chunks):
+            return_chunks.append(small_chunks[chunk['chunk_index']])
+            
         # 3. Generate Answer
         print("Generating answer...")
-        answer = generate_answer(query_text, retrieved_chunks, language)
-
+        print('retrieved_chunks', return_chunks)
+        answer = generate_answer(query['query']['content'], return_chunks, language)
+        if ("无法回答" not in answer and 'Unable to answer' not in answer):
+            retrieve_answer = answer
+            if (doc_names):
+                for doc_name in doc_names:
+                    retrieve_answer = answer.replace(doc_name, "")
+                final_retrieve = query_text + " " + retrieve_answer
+            else:
+                final_retrieve = query['query']['content'] + " " + answer
+            print("[3]third retrieve for answer: {}".format(final_retrieve))
+            retrieved_small_chunks = retriever_2.retrieve(final_retrieve, top1_check=True)
+            return_chunks = []
+            for index, chunk in enumerate(retrieved_small_chunks):
+                return_chunks.append(small_chunks[chunk['chunk_index']])
+        
         query["prediction"]["content"] = answer
-        query["prediction"]["references"] = [chunk["page_content"] for chunk in retrieved_chunks]
+        query["prediction"]["references"] = [chunk["page_content"] for chunk in return_chunks]
 
     save_jsonl(output_path, queries)
     print("Predictions saved.")
