@@ -13,7 +13,7 @@ def load_prompts():
 
 
 def generate_answer(query, context_chunks, language="en"):
-    context = "\n\n".join([chunk['metadata']['name'] + ": " + chunk['page_content'] for chunk in context_chunks])
+    context = "\n\n".join([chunk['page_content'] for chunk in context_chunks])
     prompts = load_prompts()
     if language not in prompts:
         print(f"Warning: Language '{language}' not found in prompts. Falling back to 'en'.")
