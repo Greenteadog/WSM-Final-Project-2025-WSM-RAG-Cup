@@ -76,7 +76,8 @@ def name_matcher(query, language="en"):
                 doc_id.extend(name_docs[name]['doc_id'])
                 matched_name.append(name)
         elif (name_docs[name]['domain'] == 'Medical'):
-            if (name in content):
+            hospital_name = name.split("_")[0]
+            if (hospital_name in content):
                 prediction = 'Medical'
                 doc_id.extend(name_docs[name]['doc_id'])
                 matched_name.append(name)
@@ -86,6 +87,25 @@ def name_matcher(query, language="en"):
                 doc_id.extend(name_docs[name]['doc_id']) 
                 matched_name.append(name)
     if (prediction):
+        if (prediction == 'Medical'):
+            if (len(matched_name) >= 1):
+                new_doc_id = []
+                new_matched_name = []
+                for name in matched_name:
+                    hospital_name = name.split("_")[0]
+                    user_name = name.split("_")[1]
+                    if (user_name in content):
+                        new_doc_id.extend(name_docs[name]['doc_id'])
+                        new_matched_name.append(hospital_name)
+                if (new_doc_id):
+                    doc_id = new_doc_id
+                    matched_name = new_matched_name
+                else:
+                    new_matched_name = []
+                    for name in matched_name:
+                        hospital_name = name.split("_")[0]
+                        new_matched_name.append(hospital_name)
+                    matched_name = new_matched_name
         return prediction, doc_id, matched_name
 
     # # Try LLM-based matching

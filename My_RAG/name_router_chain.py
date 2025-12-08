@@ -7,7 +7,7 @@ from ollama import Client
 import ast
 from generator import generate_answer
 import json
-from name_router_chain_generator import generate_sub_query_answer, generate_combined_questions_answer, construct_multiple_questions
+from name_router_chain_generator import generate_sub_query_answer, generate_combined_questions_answer, construct_multiple_questions, compare_then_generate_answer
 
 def name_router_chain(query, language="en", prediction=None, doc_ids=[], doc_names=[]):
     query_text = query['query']['content']
@@ -91,12 +91,11 @@ def breakdown_path(query_text, language="en", prediction=None, doc_ids=[], doc_n
     for sub_query_item in queries:
         doc_name = sub_query_item[0]
         sub_query = sub_query_item[1]
+        print("sub_query: ", sub_query)
         for index, name in enumerate(doc_names):
             if name == doc_name:
                 doc_id = doc_ids[index]
         modified_query_text = get_remove_names_from_text(sub_query, doc_names)
-        print("sub_query: ", sub_query)
-        print("modified_query_text: ", modified_query_text)
 
         # 1. Retrieve bigger chunks(use BM25)
         print("[1] retrieve with bigger chunks:")
@@ -133,8 +132,10 @@ def breakdown_path(query_text, language="en", prediction=None, doc_ids=[], doc_n
 
     # 3. Generate Final Answer
     print("[4] generate final answer:")
-    answer = generate_combined_questions_answer(query_text, queries, combined_answers, combined_chunks, language)
-    return answer, combined_chunks
+    if ('比较' in query_text or 'Compare' in query_text or 'compare' in query_text):
+        answer = compare_then_generate_answer(query_text, queries, combined_answers, combined_chunks, language)
+    else:
+        answer = generate_combined_questions_answer(query_text, queries, combined_answers, combined_chunks, language)
     
     if ("无法回答" in answer or 'Unable to answer' in answer):
         return answer, combined_chunks
@@ -144,7 +145,6 @@ def breakdown_path(query_text, language="en", prediction=None, doc_ids=[], doc_n
     # modified_query_text is not defined here, using query_text (defined at start of function)
     modified_query_text = get_remove_names_from_text(query_text, doc_names)
     final_retrieve = modified_query_text + " " + retrieve_answer
-    print("[4] rerieve for final answer: {}".format(final_retrieve))
     retrieved_small_chunks = retriever_2.retrieve(final_retrieve, top1_check=True) # retrieve for higher than the top 1 score * 0.5
     
     return_chunks = []
