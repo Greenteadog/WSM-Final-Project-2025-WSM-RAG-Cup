@@ -63,7 +63,6 @@ Context:
     """
     context = "\n".join([chunk['page_content'] for chunk in context])
     prompt = prompt.format(query=query, context=context)
-    print(prompt)
     
     ollama_config = load_ollama_config()
     client = Client(host=ollama_config["host"])
@@ -138,7 +137,6 @@ You are a concise synthesis assistant. Your goal is to construct a single, direc
     context = "\n\n".join([chunk['metadata']['name'] + ": " + chunk['page_content'] for chunk in combined_chunks])
     sub_query = "\n\n".join([f"Question: {query[1]}\nAnswer: {answer}" for query, answer in zip(queries, combined_answers)])
     prompt = prompt.format(query=original_query, context=context, sub_query=sub_query)
-    print(prompt)
     
     ollama_config = load_ollama_config()
     client = Client(host=ollama_config["host"])
@@ -150,4 +148,129 @@ You are a concise synthesis assistant. Your goal is to construct a single, direc
 
     answer = response["response"]
     print("answer: ", answer)
+    return answer
+
+def compare_then_generate_answer(original_query, queries, combined_answers, combined_chunks, language="en", doc_names=[]): 
+    if language == "en":
+        prompt = """
+### Role
+You are a precise data comparison assistant.
+
+### Task
+1. **Prioritize Sub-QA:** You must compare the entities based on the question. Your primary source of truth is the "Sub Question with Answers" section.
+2. **Support with Context:** Use the "Combined Context" to verify facts.
+
+**Question:**
+{query} 
+
+**Sub Question with Answers:**
+{sub_query}
+
+### Context
+{context}
+
+### Output Rules
+1. Identify the two entities being compared.
+2. Extract the specific values for the attribute in question (e.g., time, cost, score).
+3. Determine the "winner" based on the user's criteria (e.g., who is earlier? who is cheaper?).
+4. Output in a comparison_sentence:
+"<Winner Name> + <Attribute Context> + <Comparative Adjective>"
+
+### Answer
+"""
+    else:
+        #zh
+        prompt = """
+### Role
+You are a precise data comparison assistant.
+
+### Task
+You will receive a 
+You must compare the entities based on the question.
+
+**Original Question:**
+{query} 
+
+
+**Sub Question with Answers:**
+{sub_query}
+
+### Context
+{context}
+
+
+### Output Rules
+1. Identify the two entities being compared.
+2. Extract the specific values for the attribute in question (e.g., time, cost, score).
+3. Determine the "winner" based on the user's criteria (e.g., who is earlier? who is cheaper?).
+4. Output in a comparison_sentence:
+"<Winner Name> + <Attribute Context> + <Comparative Adjective>"
+5. Answer in Simplified Chinese.
+
+### Answer
+""" 
+    
+    context = "\n\n".join([chunk['metadata']['name'] + ": " + chunk['page_content'] for chunk in combined_chunks])
+    sub_query = "\n\n".join([f"Question: {query[1]}\nAnswer: {answer}" for query, answer in zip(queries, combined_answers)])
+    prompt = prompt.format(query=original_query, context=context, sub_query=sub_query)
+    
+    ollama_config = load_ollama_config()
+    client = Client(host=ollama_config["host"])
+    response = client.generate(model=ollama_config["model"], options={
+         "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
+         "max_tokens": 1024,
+         "stop": ["\n\n"],
+    }, prompt=prompt)
+
+    answer = response["response"]
+    print("compare answer: ", answer)
+
+    if language == "en":
+        final_prompt="""
+### Instruction
+You are a Natural Language Generator. 
+You will receive a "Raw Context" string containing key phrases separated by symbols (like "+" or "|").
+Your task is to convert these fragments into a single, grammatically correct, and fluent sentence.
+
+### Guidelines
+1. **Connect Logic:** Add necessary prepositions (of, in, by, to) and possession markers ('s) to make the sentence flow naturally.
+2. **Preserve Meaning:** Do not change the original meaning or facts, using all the information in the context.
+3. **No Fluff:** Do not add introductory phrases like "The sentence is..." or "Here is the result." Just output the sentence.
+
+### Raw Context
+{answer}
+
+### Natural Sentence
+"""
+    else:
+        final_prompt="""
+### Instruction
+You are a Natural Language Generator. 
+You will receive a "Raw Context" string containing key phrases separated by symbols (like "+" or "|").
+Your task is to convert these fragments into a single, grammatically correct, and fluent sentence.
+
+### Guidelines
+1. **Connect Logic:** Add necessary prepositions (of, in, by, to) and possession markers ('s) to make the sentence flow naturally.
+2. **Preserve Meaning:** Do not change the original meaning or facts, using all the information in the context.
+3. **No Fluff:** Do not add introductory phrases like "The sentence is..." or "Here is the result." Just output the sentence.
+4. Answer in **Simplified Chinese**.
+
+### Raw Context
+{answer}
+
+### Natural Sentence
+"""
+    prompt = final_prompt.format(answer=answer)
+    
+    ollama_config = load_ollama_config()
+    client = Client(host=ollama_config["host"])
+    response = client.generate(model=ollama_config["model"], options={
+         "temperature": 0.3, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
+         "max_tokens": 1024,
+         "stop": ["\n\n"],
+    }, prompt=prompt)
+
+    answer = response["response"]
+    print("final compare answer: ", answer)
+
     return answer
