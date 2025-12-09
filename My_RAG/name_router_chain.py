@@ -145,6 +145,9 @@ def breakdown_path(query_text, language="en", prediction=None, doc_ids=[], doc_n
     else:
         answer = generate_combined_questions_answer(query_text, queries, combined_answers, combined_chunks, language)
     
+    # Test for without fine-tune retrieve
+    return answer, combined_chunks
+
     if ("无法回答" in answer or 'Unable to answer' in answer):
         return answer, combined_chunks
     
