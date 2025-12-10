@@ -6,8 +6,8 @@ def llm_router_chain(query, language):
     query_text = query['query']['content']
     
     # 1. Do the query expansion
-    new_query = expand_query(query_text, language)
-    # new_query = expand_query_2(query_text, language, 3)
+    # new_query = expand_query(query_text, language)
+    new_query = expand_query_2(query_text, language)
     print("new_query: ", new_query)
     # 2. Retrieve chunks
     retrieved_chunks = retrieve_chunks(new_query, language)
@@ -58,26 +58,50 @@ def expand_query(query, language="en", size=3):
 
 def expand_query_2(query, language="en"):
     if language == "zh":
-        prompt = f"""你是一個有幫助的問答助手。請回答以下問題：
+        prompt = f"""你是一個有幫助的問答助手。請回答以下問題並保留思考過程：
         {query}
-        給在回答前出你的思考過程。"""
+
+        **格式:**
+        reasoning:[你的思考過程]
+        answer:[你的回答]"""
     else:
-        prompt = f"""You are a helpful Q&A assistant. Answer the following question:
+        prompt = f"""You are a helpful Q&A assistant. Answer the following question and keep the thinking process:
         {query}
-        Give the rationale before answering."""
+
+        **Format:**
+        reasoning: [Your thinking process]
+        answer: [Your answer]"""
     try:
         client = Client()
         response = client.generate(model="granite4:3b", prompt=prompt, stream=False)
-        print("expand query response: ", response)
-        return query + " " + " ".join(response.get("response", "").split('\n'))
+        # Extract only the reasoning part
+        full_response = response.get("response", "")
+        reasoning = ""
+        if language == "zh":
+            if "reasoning:" in full_response.lower():
+                parts = full_response.lower().split("answer:", 1)
+                reasoning = parts[0].replace("reasoning:", "").strip()
+            if not reasoning:  # Fallback: use whole response
+                reasoning = full_response
+        else:
+            if "reasoning:" in full_response.lower():
+                parts = full_response.lower().split("answer:", 1)
+                reasoning = parts[0].replace("reasoning:", "").strip()
+            else:
+                reasoning = full_response
+        
+        # Combine query with reasoning only
+        return query + " " + reasoning
     except Exception as e:
         print(f"Error: {e}")
         return query
 
+def expand_query_3(query, language="en"):
+
 def retrieve_chunks(query, language="en", doc_ids=[]):
     row_chunks = get_chunks_from_db(None, doc_ids, language)
     retriever = create_retriever(row_chunks, language)
-    retrieved_chunks = retriever.retrieve(query, top_k=10, threshold=threshold)
+    retrieved_chunks = retriever.retrieve(query, top_k=10)
     return retrieved_chunks
 
 def generate_answer_llm(query, retrieved_chunks, language="en"):
