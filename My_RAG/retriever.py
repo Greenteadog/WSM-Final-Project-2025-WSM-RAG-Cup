@@ -2,6 +2,8 @@ from rank_bm25 import BM25Okapi
 import jieba
 from nltk.stem import PorterStemmer
 import re
+from ollama import Client
+from utils import load_ollama_config
 
 class BM25Retriever:
     def __init__(self, chunks, language="en"):
@@ -46,10 +48,6 @@ class BM25Retriever:
         
         # Get top_k indices sorted by score
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
-        
-        # Debug: Show top scores
-        top_scores = [scores[i] for i in top_indices]
-        print(f"[BM25] Top {len(top_scores)} scores: {[f'{s:.2f}' for s in top_scores[:5]]}")
         
         # Filter by threshold (since sorted, can cut off when score drops below threshold)
         if threshold > 0:
@@ -122,3 +120,80 @@ def get_chunks_from_db(prediction, doc_id, language):
                 continue
         chunks.append({"page_content": row[2], "name": row[1]})
     return chunks
+
+class DenseRetriever:
+    def __init__(self, chunks, language="en", embedding_model="embeddinggemma:300m"):
+        """
+        Dense retriever using embedding-based similarity.
+        
+        Args:
+            chunks: List of document chunks
+            language: Language code ('en' or 'zh')
+            embedding_model: Embedding model name (default: qwen3-embedding:0.6b for remote compatibility)
+        """
+        self.chunks = chunks
+        self.language = language
+        self.embedding_model = embedding_model
+        self.corpus = [chunk['page_content'] for chunk in chunks]
+        
+        # Load Ollama configuration for host
+        ollama_config = load_ollama_config()
+        self.client = Client(host=ollama_config["host"])
+        
+        print(f"[DenseRetriever] Generating embeddings for {len(self.corpus)} chunks using {self.embedding_model}...")
+        self.chunk_embeddings = []
+        for doc in self.corpus:
+            response = self.client.embeddings(model=self.embedding_model, prompt=doc)
+            self.chunk_embeddings.append(response['embedding'])
+        
+        print(f"[DenseRetriever] Embeddings generated successfully")
+
+    def cosine_similarity(self, vec1, vec2):
+        import numpy as np
+        vec1 = np.array(vec1)
+        vec2 = np.array(vec2)
+        return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+    def retrieve(self, query, top_k=5, top1_check=False, threshold=0):
+        query_response = self.client.embeddings(model=self.embedding_model, prompt=query)
+        query_embedding = query_response['embedding']
+        
+        similarities = []
+        for i, chunk_embedding in enumerate(self.chunk_embeddings):
+            sim = self.cosine_similarity(query_embedding, chunk_embedding)
+            similarities.append((i, sim))
+        
+        # Sort by similarity (descending)
+        similarities.sort(key=lambda x: x[1], reverse=True)
+        
+        # Get top_k indices
+        top_indices = [idx for idx, sim in similarities[:top_k]]
+        top_scores = [sim for idx, sim in similarities[:top_k]]
+        
+        print(f"[DenseRetriever] Top {len(top_scores)} similarities: {[f'{s:.3f}' for s in top_scores[:5]]}")
+        
+        # Filter by threshold
+        if threshold > 0:
+            filtered_indices = []
+            for idx, score in zip(top_indices, top_scores):
+                if score > threshold:
+                    filtered_indices.append(idx)
+                else:
+                    break
+            print(f"[DenseRetriever] Threshold={threshold}: {len(top_indices)} → {len(filtered_indices)} chunks")
+            top_indices = filtered_indices
+        
+        # Apply top1_check if needed
+        if top1_check and len(top_indices) > 1 and len(top_scores) > 0:
+            top_score = top_scores[0]
+            filtered = []
+            for idx, score in zip(top_indices, top_scores):
+                if score > top_score / 2:
+                    filtered.append(idx)
+                else:
+                    break
+            top_indices = filtered
+        
+        # Get the actual chunks
+        top_chunks = [self.chunks[i] for i in top_indices]
+        return top_chunks
