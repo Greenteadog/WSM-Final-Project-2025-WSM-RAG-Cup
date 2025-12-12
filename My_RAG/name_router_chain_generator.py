@@ -336,11 +336,6 @@ You are a precise data comparison assistant.
 4. Output in a comparison_sentence:
 "<Winner Name> + <Attribute Context> + <Comparative Adjective>"
 
-### Example Answers
-Both Z. Torres and Z. Ruiz were fined $100,000. Therefore, their total fine amounts are the same.
-duCorp had higher operating income in 2020 with $150 million, compared to Artistic Creations Inc.'s $30 million in 2019.
-SkyQuest Airlines distributed more dividends in 2017 with $50 million compared to Culture Innovators Ltd.'s $5 million in 2021.
-
 ### Answer
 """
     else:
@@ -372,13 +367,6 @@ You must compare the entities based on the question.
 "<Winner Name> + <Attribute Context> + <Comparative Adjective>"
 5. Answer in Simplified Chinese.
 
-### Example Answers
-绿源环保有限公司的大规模融资金额更大。绿源环保有限公司在2017年3月成功募集了5亿元资金，而美好家政服务有限公司在2018年3月募集了1亿元人民币资金。
-云翼航空有限公司的二氧化碳排放量更高，为10000吨，而旅游乐园有限公司的二氧化碳排放量为5000吨。
-赵某某被判处有期徒刑三年，适用缓刑三年；柏某被判处有期徒刑五年。柏某判刑时间更长。
-赵某某和柏某的判决时间都是2023年10月15日。
-于某某的年龄为79岁，元某某的年龄为12岁。两者年龄差异为67岁。
-
 ### Answer
 """ 
     
@@ -409,6 +397,11 @@ Your task is to convert these fragments into a single, grammatically correct, an
 2. **Preserve Meaning:** Do not change the original meaning or facts, using all the information in the context.
 3. **No Fluff:** Do not add introductory phrases like "The sentence is..." or "Here is the result." Just output the sentence.
 
+### Example Answers(**focus on the format**)
+Both Z. Torres and Z. Ruiz were fined $100,000. Therefore, their total fine amounts are the same.
+duCorp had higher operating income in 2020 with $150 million, compared to Artistic Creations Inc.'s $30 million in 2019.
+SkyQuest Airlines distributed more dividends in 2017 with $50 million compared to Culture Innovators Ltd.'s $5 million in 2021.
+
 ### Raw Context
 {answer}
 
@@ -426,6 +419,11 @@ Your task is to convert these fragments into a single, grammatically correct, an
 2. **Preserve Meaning:** Do not change the original meaning or facts, using all the information in the context.
 3. **No Fluff:** Do not add introductory phrases like "The sentence is..." or "Here is the result." Just output the sentence.
 4. Answer in **Simplified Chinese**.
+
+### Example Answers(**focus on the format**)
+云翼航空有限公司的二氧化碳排放量更高，为10000吨，而旅游乐园有限公司的二氧化碳排放量为5000吨。
+赵某某和柏某的判决时间都是2023年10月15日。
+于某某的年龄为79岁，元某某的年龄为12岁。两者年龄差异为67岁。
 
 ### Raw Context
 {answer}
