@@ -34,7 +34,7 @@ default:
     4. Add "。" at the end of the answer.
     5. Answer in Simplified Chinese.
 
-    **If the answer is not founded or you don't know the answer, state "无法回答". no need to explain.**
+    **If the answer is not founded or you don't know the answer, state ONLY "无法回答" and no need to explain.**
 
     ### Question
     {query}
