@@ -1,0 +1,496 @@
+diff --git a/My_RAG/llm_router_chain.py b/My_RAG/llm_router_chain.py
+index 3aadf89..ad3d136 100644
+--- a/My_RAG/llm_router_chain.py
++++ b/My_RAG/llm_router_chain.py
+@@ -5,11 +5,10 @@ from ollama import Client
+ 
+ def llm_router_chain(query, language):
+     query_text = query['query']['content']
+-    
+     # 1. Do the query expansion
+     #new_query = expand_query(query_text, language)
+-    new_query = expand_query_2(query_text, language)
+-    #new_query = expand_query_3(query_text, language)  # Uses FAISS dense retrieval
++    #new_query = expand_query_2(query_text, language)  # LLM reasoning only
++    new_query = expand_query_3(query_text, language)  # Iterative FAISS-based refinement (5 iterations)
+     print("new_query: ", new_query)
+     # 2. Retrieve chunks
+     retrieved_chunks = retrieve_chunks(new_query, language)
+@@ -99,108 +98,158 @@ def expand_query_2(query, language="en"):
+         print(f"Error: {e}")
+         return query
+ 
+-def expand_query_3(query, language="en"):
+-    # 1. Retrieve with Dense Retrieval
++def expand_query_3(query, language="en", max_iterations=5):
++    """
++    Iteratively expand query using dense retrieval feedback.
++    Continues up to max_iterations times if scores keep improving.
++    
++    Args:
++        query: Original query text
++        language: Language code
++        max_iterations: Maximum number of refinement iterations (default: 3)
++        
++    Returns:
++        Best expanded query found
++    """
++    # Initialize
+     row_chunks = get_chunks_from_db(None, [], language)  # Get all chunks
+     dense_retriever = DenseRetriever(row_chunks, language=language)
+-    retrieved_chunks = dense_retriever.retrieve(query, top_k=5)
+-    scores = dense_retriever.get_scores()  # Get cached scores from retrieve()
+     
+-    # 2. Use prompt template from paper to ask LLM to expand query
+-    if language == "zh":
+-        prompt = f"""我的目標是重新表述查詢以檢索得分高的答案文檔。
++    current_query = query
++    best_query = query
++    best_avg_score = 0.0
++    
++    print(f"[QueryExpansion] Starting iterative retrieval (max {max_iterations} iterations)")
++    
++    for iteration in range(max_iterations):
++        print(f"\n[QueryExpansion] Iteration {iteration + 1}/{max_iterations}")
++        print(f"[QueryExpansion] Current query: {current_query}")
++        
++        # 1. Retrieve with current query
++        retrieved_chunks = dense_retriever.retrieve(current_query, top_k=5)
++        scores = dense_retriever.get_scores()  # Get cached scores from retrieve()
++        
++        # Calculate average score
++        avg_score = sum(scores) / len(scores) if scores else 0.0
++        print(f"[QueryExpansion] Scores: {[f'{s:.3f}' for s in scores]}, Avg: {avg_score:.3f}")
++        
++        # Check if scores improved
++        if avg_score > best_avg_score:
++            best_avg_score = avg_score
++            best_query = current_query
++            print(f"[QueryExpansion] ✓ Score improved! New best avg: {best_avg_score:.3f}")
++        else:
++            print(f"[QueryExpansion] ✗ Score did not improve ({avg_score:.3f} <= {best_avg_score:.3f})")
++            print(f"[QueryExpansion] Stopping iteration, returning best query")
++            break
++        
++        # If this is the last iteration, don't generate a new query
++        if iteration == max_iterations - 1:
++            print(f"[QueryExpansion] Reached max iterations, returning best query")
++            break
++        
++        # 2. Generate rephrased query using LLM
++        if language == "zh":
++            prompt = f"""我的目標是重新表述查詢以檢索得分高的答案文檔。
+ 
+-            **範例 1:**
+-            原始查詢：公司在2019年3月做了什麼變更？
+-            前3個檢索文檔：
+-            1. 2019年3月，公司修訂了公司治理政策...
+-            2. 該公司在2019年進行了多項改革...
+-            3. 公司治理架構在年初進行了調整...
+-            分數：['0.650', '0.520', '0.480']
++                **範例 1:**
++                原始查詢：公司在2019年3月做了什麼變更？
++                前3個檢索文檔：
++                1. 2019年3月，公司修訂了公司治理政策...
++                2. 該公司在2019年進行了多項改革...
++                3. 公司治理架構在年初進行了調整...
++                分數：['0.650', '0.520', '0.480']
+ 
+-            重新表述的查詢：[2019年3月公司治理政策修訂的具體內容]
+-            新分數：['0.850', '0.820', '0.780']  ← 分數提高！
++                重新表述的查詢：[2019年3月公司治理政策修訂的具體內容]
++                新分數：['0.850', '0.820', '0.780']  ← 分數提高！
+ 
+-            **範例 2:**
+-            原始查詢：誰在2020年被任命為董事？
+-            前3個檢索文檔：
+-            1. 2020年1月，James Peterson被任命為新董事...
+-            2. 董事會在2020年進行了人事變動...
+-            3. 公司在年初任命了新的董事成員...
+-            分數：['0.720', '0.610', '0.590']
++                **範例 2:**
++                原始查詢：誰在2020年被任命為董事？
++                前3個檢索文檔：
++                1. 2020年1月，James Peterson被任命為新董事...
++                2. 董事會在2020年進行了人事變動...
++                3. 公司在年初任命了新的董事成員...
++                分數：['0.720', '0.610', '0.590']
+ 
+-            重新表述的查詢：[2020年1月James Peterson董事任命]
+-            新分數：['0.920', '0.880', '0.850']  ← 分數提高！
++                重新表述的查詢：[2020年1月James Peterson董事任命]
++                新分數：['0.920', '0.880', '0.850']  ← 分數提高！
+ 
+-            ---
++                ---
+ 
+-            **現在輪到你了:**
+-            查詢：{query}
++                **現在輪到你了:**
++                當前查詢：{current_query}
++                當前平均分數：{avg_score:.3f}
+ 
+-            前5個檢索文檔：
+-            {chr(10).join([f"{i+1}. {chunk['page_content'][:200]}..." for i, chunk in enumerate(retrieved_chunks)])}
++                前5個檢索文檔：
++                {chr(10).join([f"{i+1}. {chunk['page_content'][:200]}..." for i, chunk in enumerate(retrieved_chunks)])}
+ 
+-            分數：{[f'{s:.3f}' for s in scores]}
++                分數：{[f'{s:.3f}' for s in scores]}
+ 
+-            請寫一個新的重新表述的查詢，與舊查詢不同，並且盡可能獲得高分。
+-            請將文本寫在方括號中。"""
+-    else:
+-        prompt = f"""My goal is to make rephrased query to retrieve answer documents with high scores.
++                請寫一個新的重新表述的查詢，與當前查詢不同，並且盡可能獲得更高分數。
++                請將文本寫在方括號中。"""
++        else:
++            prompt = f"""My goal is to make rephrased query to retrieve answer documents with high scores.
+ 
+-            **Example 1:**
+-            Original Query: What changes did the company make in March 2019?
+-            TOP-3 retrieved docs:
+-            1. In March 2019, the company revised its corporate governance policy...
+-            2. The company made several reforms in 2019...
+-            3. Corporate governance structure was adjusted at the beginning of the year...
+-            Scores: ['0.650', '0.520', '0.480']
++                **Example 1:**
++                Original Query: What changes did the company make in March 2019?
++                TOP-3 retrieved docs:
++                1. In March 2019, the company revised its corporate governance policy...
++                2. The company made several reforms in 2019...
++                3. Corporate governance structure was adjusted at the beginning of the year...
++                Scores: ['0.650', '0.520', '0.480']
+ 
+-            Rephrased Query: [March 2019 corporate governance policy revision details]
+-            New Scores: ['0.850', '0.820', '0.780']  ← Score improved!
++                Rephrased Query: [March 2019 corporate governance policy revision details]
++                New Scores: ['0.850', '0.820', '0.780']  ← Score improved!
+ 
+-            **Example 2:**
+-            Original Query: Who was appointed as director in 2020?
+-            TOP-3 retrieved docs:
+-            1. In January 2020, James Peterson was appointed as new director...
+-            2. The board underwent personnel changes in 2020...
+-            3. The company appointed new board members at the start of the year...
+-            Scores: ['0.720', '0.610', '0.590']
++                **Example 2:**
++                Original Query: Who was appointed as director in 2020?
++                TOP-3 retrieved docs:
++                1. In January 2020, James Peterson was appointed as new director...
++                2. The board underwent personnel changes in 2020...
++                3. The company appointed new board members at the start of the year...
++                Scores: ['0.720', '0.610', '0.590']
+ 
+-            Rephrased Query: [January 2020 James Peterson director appointment]
+-            New Scores: ['0.920', '0.880', '0.850']  ← Score improved!
++                Rephrased Query: [January 2020 James Peterson director appointment]
++                New Scores: ['0.920', '0.880', '0.850']  ← Score improved!
+ 
+-            ---
++                ---
+ 
+-            **Now it's your turn:**
+-            Query: {query}
++                **Now it's your turn:**
++                Current Query: {current_query}
++                Current Avg Score: {avg_score:.3f}
+ 
+-            TOP-5 retrieved docs:
+-            {chr(10).join([f"{i+1}. {chunk['page_content'][:200]}..." for i, chunk in enumerate(retrieved_chunks)])}
++                TOP-5 retrieved docs:
++                {chr(10).join([f"{i+1}. {chunk['page_content'][:200]}..." for i, chunk in enumerate(retrieved_chunks)])}
+ 
+-            Scores: {[f'{s:.3f}' for s in scores]}
++                Scores: {[f'{s:.3f}' for s in scores]}
+ 
+-            Write your new rephrased query that is different from the old ones and has a score as high as possible.
+-            Write the text in square brackets."""
+-    
+-    print("prompt: ", prompt)
+-    # 3. Return expanded query
+-    try:
+-        client = Client()
+-        response = client.generate(model="granite4:3b", prompt=prompt, stream=False)
+-        full_response = response.get("response", "").strip()
++                Write your new rephrased query that is different from the current one and has a score as high as possible.
++                Write the text in square brackets."""
+         
+-        # Extract text from square brackets
+-        import re
+-        match = re.search(r'\[(.*?)\]', full_response)
+-        if match:
+-            expanded_query = match.group(1).strip()
+-        else:
+-            # Fallback: use the whole response if no brackets found
+-            expanded_query = full_response
+-        return expanded_query
+-    except Exception as e:
+-        print(f"Error: {e}")
+-        return query
++        # 3. Get rephrased query from LLM
++        try:
++            client = Client()
++            response = client.generate(model="granite4:3b", prompt=prompt, stream=False)
++            full_response = response.get("response", "").strip()
++            
++            # Extract text from square brackets
++            import re
++            match = re.search(r'\[(.*?)\]', full_response)
++            if match:
++                current_query = match.group(1).strip()
++                print(f"[QueryExpansion] Generated new query: {current_query}")
++            else:
++                # Fallback: use the whole response if no brackets found
++                current_query = full_response
++                print(f"[QueryExpansion] No brackets found, using full response: {current_query}")
++        except Exception as e:
++            print(f"[QueryExpansion] Error generating query: {e}")
++            break
++    
++    print(f"\n[QueryExpansion] Final best query: {best_query}")
++    print(f"[QueryExpansion] Final best avg score: {best_avg_score:.3f}")
++    return best_query
++
+ 
+ def retrieve_chunks(query, language="en", doc_ids=[]):
+     row_chunks = get_chunks_from_db(None, doc_ids, language)
+diff --git a/My_RAG/prompts.yaml b/My_RAG/prompts.yaml
+index 4a78678..3577b0a 100644
+--- a/My_RAG/prompts.yaml
++++ b/My_RAG/prompts.yaml
+@@ -6,13 +6,25 @@ default:
+     ### Steps
+     1. Analyze the Question to understand what specific information is needed.
+     2. Scan the Reference Data to find the exact match.
+-    3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information with the SAME format as the reference data. Do not use full sentences. Do not repeat the question or the context.
+-    4. Use "." to end the answer.
++    3. **USE EXACT PHRASES from the reference data.** Do NOT paraphrase or use synonyms.
++    4. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information with the SAME format as the reference data. Do not use full sentences. Do not repeat the question or the context.
++    5. Use "." to end the answer.
+ 
++    **CRITICAL: Copy key terms and phrases VERBATIM from the reference data.**
+     **If the answer is not founded or you don't know the answer, state "Unable to answer." no need to explain.**
+     **Ensure the answer's completeness.**
+     **Answer MUST end with a period.**
+ 
++    ### Example 1
++    **Question:** When did National Development Corporation revise their corporate governance policy?
++    **Reference Data:** In April 2019, National Development Corporation revised its corporate governance policy to enhance transparency and accountability.
++    **Answer:** April 2019.
++
++    ### Example 2
++    **Question:** What was the total carbon emissions for EcoTech Industries in 2020?
++    **Reference Data:** EcoTech Industries reported total carbon emissions of 15,000 tons in 2020, representing a 10% reduction from the previous year.
++    **Answer:** 15,000 tons.
++
+     ### Question
+     {query}
+ 
+@@ -24,26 +36,28 @@ default:
+     ### Answer
+ 
+   zh: |
+-    ### 指示
+     ### Instruction
+-    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
++    你是一个问答助手。根据提供的参考资料回答问题。
+ 
+-    ### Steps
+-    1. Analyze the Question to understand what specific information is needed.
+-    2. Scan the Reference Data to find the exact match.
+-    3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information same **units and formatting** as the reference data. Do not use full sentences. Do not repeat the question or the context.
+-    4. Answer in Simplified Chinese.
+-    **If the answer is not founded or you don't know the answer, state "无法回答". no need to explain.**
++    ### 要求
++    1. **只使用参考资料中的信息**，不要编造内容。
++    2. **直接复制参考资料中的关键词和短语**。
++    3. 答案要简洁，只回答问题所问的内容。
++    4. 以"。"结尾。
++    5. 如果无法回答，只回复"无法回答"。
+ 
+-    ### Question
++    ### 示例
++    **问题:** 绿源环保有限公司在2017年4月发生了什么事故？
++    **参考资料:** 在2017年4月，绿源环保有限公司发生了一起严重的废水泄漏事故，对周边环境和社区造成了污染。
++    **答案:** 严重的废水泄漏事故。
++
++    ### 问题
+     {query}
+ 
+-    ### Reference Data
+-    <data>
++    ### 参考资料
+     {context}
+-    </data>
+ 
+-    ### Answer
++    ### 答案
+ 
+ 
+ llm_chain:
+@@ -52,10 +66,20 @@ llm_chain:
+     You are an analytical Q&A assistant specialized in handling ambiguous or general queries. The question may lack specific subjects, names, dates, or other concrete details. Your task is to synthesize information from the reference data to provide a meaningful answer.
+ 
+     **CRITICAL!!!MUST FOLLOW:: 
++    **USE EXACT PHRASES and TERMINOLOGY from the reference data. Do NOT paraphrase.**
+     **Use ONLY the provided reference data. Do not use external knowledge or make assumptions beyond what is explicitly stated in the context.**
+     **If you cannot provide a meaningful answer based on the reference data, state "Unable to answer."no need to explain.**
+     **Ensure the answer's completeness.**
+     **Answer MUST end with a period.**
++    **Answer MUST be in English.**
++
++    ### Example 1
++    **Question:** How did GreenTech Solutions support its environmental protection plans through carbon offset projects, energy efficiency initiatives, and green product development in 2020?
++    **Answer:** GreenTech Solutions supported its environmental protection plans through multiple measures in 2020. First, the company invested in carbon offset projects in February 2020, including forestry and renewable energy projects to offset carbon emissions and work towards carbon neutrality. Second, the company implemented energy efficiency initiatives in June 2020, reducing energy consumption and greenhouse gas emissions, directly improving efficiency and environmental performance. Finally, the company developed eco-friendly products in August 2020, reducing environmental impact and enhancing market competitiveness and brand image. These measures provided a solid foundation for the company's future environmental protection plans.
++
++    ### Example 2
++    **Question:** Compare the times of corporate governance policy revisions for Fabrikon Manufacturing Ltd. and National Development Corporation. Which company revised their corporate governance policy earlier?
++    **Answer:** National Development Corporation revised their corporate governance policy earlier in April 2019, while Fabrikon Manufacturing Ltd. revised theirs in July 2021.
+ 
+     ### Question
+     {query}
+@@ -68,22 +92,26 @@ llm_chain:
+     ### Answer
+   
+   zh: |
+-    ### 指示
+-    你是一個專門處理模糊或一般性查詢的分析型問答助手。問題可能缺乏具體的主題、名稱、日期或其他具體細節。你的任務是從參考資料中綜合信息，提供有意義的答案。
++    ### Instruction
++    你是一个分析型问答助手。根据参考资料回答问题。
++
++    ### 要求
++    1. **只使用参考资料中的信息**，不要编造或添加额外内容。
++    2. **直接引用参考资料中的原文**。
++    3. 答案要完整、准确。
++    4. 以"。"结尾。
++    5. 用简体中文回答。
++    6. 如果无法回答，只回复"无法回答"。
+ 
+-    **以下四點非常重要!!!請絕對遵守：**
+-    **僅使用提供的參考資料。不要使用外部知識或做出超出上下文明確陳述的假設。**
+-    **如果無法根據參考資料提供有意義的答案，請回答「無法回答」，無需解釋。**
+-    **確保答案的完整性。**
+-    **答案結尾絕對要是句號。**
++    ### 示例
++    **问题:** 公司如何支持环境保护计划？
++    **答案:** 公司在2017年2月投资于碳抵消项目，通过林业项目和可再生能源项目来抵消其碳排放。同时在2017年6月实施了节能减排项目，减少了能源消耗。最后在2017年8月开发了环保型产品。
+ 
+-    ### 問題
++    ### 问题
+     {query}
+ 
+-    ### 參考資料
+-    <data>
++    ### 参考资料
+     {context}
+-    </data>
+ 
+     ### 答案
+ 
+@@ -94,7 +122,7 @@ summary_chain:
+ 
+     ### Steps
+     1. Analyze the Question to understand what specific information is needed.
+-    2. Read the document and Retrieve relevant sentence(s).
++    2. Scan the document and Retrieve relevant sentence(s).
+     3. Retrieved sentence(s) can be one or multiple. Please output the response in JSON format like this:
+     {{
+         "retrieve": ["relevant sentence 1", "relevant sentence 2", ...],
+@@ -105,6 +133,10 @@ summary_chain:
+     **Ensure the answer's completeness.**
+     **Answer MUST end with a period.**
+ 
++    ### Example
++    **Question:** Summarize the environmental responsibility measures taken by GreenTech Solutions in 2020 based on their Environmental and Social Responsibility Report.
++    **Answer:** According to GreenTech Solutions' 2020 Environmental and Social Responsibility Report, the company took multiple environmental responsibility measures. First, the company invested in carbon offset projects in February 2020, including forestry and renewable energy projects to offset carbon emissions and work towards carbon neutrality. Second, the company built new pollution prevention facilities in March 2020, such as wastewater treatment systems and emission control equipment, to reduce environmental pollution. Additionally, the company implemented an Environmental Management System (EMS) in May 2020 to improve environmental performance, reduce waste generation, and ensure compliance. The company also implemented energy efficiency initiatives in June 2020 to reduce energy consumption and greenhouse gas emissions. In August 2020, the company developed eco-friendly products to reduce environmental impact. These measures significantly improved the company's environmental performance and fulfilled its social responsibility in environmental protection.
++
+     ### Question
+     {query}
+ 
+@@ -116,29 +148,21 @@ summary_chain:
+     ### Answer
+ 
+   zh: |
+-    ### 指示
+-    你是一個有幫助的問答助手。僅使用提供的參考資料來回答用戶的問題。
+-
+-    ### 步驟
+-    1. 分析問題以了解需要什麼具體信息。
+-    2. 閱讀整篇文章，並找出相關句子。
+-    3. 找回的相似句子可以是一個或多個。請以JSON格式輸出回答，如下所示：
+-    {{
+-        "retrieve": ["相關句子1", "相關句子2", ...],
+-        "answer": "答案內容必須以引號括起來。"
+-    }}
++    ### Instruction
++    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
+ 
+-    **如果找不到答案或你不知道答案，請回答「無法回答」，無需解釋。**
+-    **確保答案的完整性。**
+-    **答案結尾一定絕對要是句號。**
++    ### 要求
++    1. 分析问题，理解需要的信息。
++    2. 从文档中找到相关句子。
++    3. **只使用文档中的信息**，不要编造内容。
++    4. 用简体中文回答，以"。"结尾。
++    5. 如果无法回答，只回复"无法回答"。
+ 
+-    ### 問題
++    ### 问题
+     {query}
+ 
+-    ### 文章
+-    <data>
++    ### 文档
+     {context}
+-    </data>
+ 
+     ### 答案
+ 
+@@ -149,7 +173,7 @@ summary_chain_json_fallback:
+ 
+     ### Steps
+     1. Analyze the Question to understand what specific information is needed.
+-    2. Read the document, find the relevant information and answer the question.
++    2. Scan the document, find the relevant information and answer the question.
+ 
+     **If the answer is not founded or you don't know the answer, state "Unable to answer." no need to explain.**
+     **Ensure the answer's completeness.**
+@@ -166,23 +190,23 @@ summary_chain_json_fallback:
+     ### Answer
+ 
+   zh: |
+-    ### 指示
+-    你是一個有幫助的問答助手。僅使用提供的參考資料來回答用戶的問題。
++    ### Instruction
++    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
+ 
+-    ### 步驟
+-    1. 分析問題以了解需要什麼具體信息。
+-    2. 閱讀文章，找到相關信息並回答問題。
++    ### Steps
++    1. Analyze the Question to understand what specific information is needed.
++    2. Scan the document, find the relevant information and answer the question.
++    3. Add "。" at the end of the answer.
++    4. Answer in Simplified Chinese.
+ 
+-    **如果找不到答案或你不知道答案，請回答「無法回答」，無需解釋。**
+-    **確保答案的完整性。**
+-    **答案結尾一定絕對要是句號。**
++    **If the answer is not founded or you don't know the answer, state ONLY "无法回答" and no need to explain.**
+ 
+-    ### 問題
++    ### Question
+     {query}
+ 
+-    ### 文章
++    ### Document
+     <data>
+     {context}
+     </data>
+ 
+-    ### 答案
+\ No newline at end of file
++    ### Answer
+\ No newline at end of file
