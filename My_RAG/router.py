@@ -3,7 +3,7 @@ import numpy as np
 from ollama import Client
 import os
 import sys
-from summary_router_chain import summary_router_chain
+from summary_router_chain import summary_router_chain, get_contents_from_db
 from name_router_chain import name_router_chain
 from time_router_chain import time_router_chain
 from default_chain import default_chain
@@ -24,6 +24,13 @@ def is_summary_router(query, language):
             return True
     return False
 
+def is_short_title_doc(doc_id):
+    docs = get_contents_from_db(doc_id)
+    for doc in docs:
+        if "\n\n" in doc and (":" in doc or "：" in doc):
+            return True
+    return False
+    
 def router(query, language="en"):
     ## Step 0. Extract entities from query
     query_text = query['query']['content']
@@ -38,7 +45,7 @@ def router(query, language="en"):
             entities[key] = list(set(entities[key] + name_entities[key]))
     
     print("[Router] matching result: ", prediction, doc_id, matched_name)
-
+    
     ## Step 2. summary chain
     if (is_summary_router(query, language)):
         print("[Router][2] summary chain")
@@ -48,6 +55,10 @@ def router(query, language="en"):
     if (prediction):
         print("[Router][3] name_router chain")
         return name_router_chain(query, language, prediction, doc_id, matched_name)
+
+    if is_short_title_doc(doc_id):
+        print("Use summary chain for short title document")
+        return summary_router_chain(query, language, doc_id)
 
     ## Step 4. time_router chain (if temporal entities found)
     # if (entities['years'] or entities['months'] or entities['dates']):
