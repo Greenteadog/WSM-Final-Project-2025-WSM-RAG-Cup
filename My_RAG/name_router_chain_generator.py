@@ -93,7 +93,7 @@ def generate_complex_answer(query, docs, language="en"):
 You are a precise Document Summarizer.
 
 ### Task
-Answer the user's question by synthesizing the provided court judgments. 
+Answer the user's question by synthesizing the provided context.
 Your output must be a single, fluent narrative sentence that cites the specific court and provides the exact supporting informations.
 Only output the answer, do not include any additional text.
 If you are not able to answer the question, output "Unable to answer.".
@@ -124,10 +124,10 @@ If you are not able to answer the question, output "Unable to answer.".
 You are a precise Document Summarizer.
 
 ### Task
-Answer the user's question by synthesizing the provided court judgments. 
-Your output must be a single, fluent narrative sentence that cites the specific court and provides the exact supporting informations.
-Only output the answer, do not include any additional text.
-If you are not able to answer the question, output "无法回答".
+1. Answer the user's question by synthesizing the provided context. 
+2. Your output must be a single, fluent narrative sentence that cites the specific court and provides the exact supporting informations.
+3. Only output the answer, do not include any additional text.
+4. If you are not able to answer the question, output "无法回答".
 Answer in Simplified Chinese.
 
 ### Reference Data
@@ -155,6 +155,7 @@ Answer in Simplified Chinese.
 '''
     prompt = prompt.format(context="\n".join([doc['content'] for doc in docs]), query=query)
     ollama_config = load_ollama_config()
+    print("generate_complex_answer prompt: \n", prompt)
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
         "num_ctx": 32768,
@@ -189,6 +190,7 @@ User Query: {query}
 
     prompt = prompt.format(query=query, doc_names=doc_names)
     ollama_config = load_ollama_config()
+    print("construct_multiple_questions prompt: \n", prompt)
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
          "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
@@ -297,10 +299,11 @@ You are a concise synthesis assistant. Your goal is to construct a single, direc
     context = "\n\n".join([chunk['metadata']['name'] + ": " + chunk['page_content'] for chunk in combined_chunks])
     sub_query = "\n\n".join([f"Question: {query[1]}\nAnswer: {answer}" for query, answer in zip(queries, combined_answers)])
     prompt = prompt.format(query=original_query, context=context, sub_query=sub_query)
-    
+    print("construct_multiple_questions prompt: \n", prompt)
     ollama_config = load_ollama_config()
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
+        "num_ctx": 8192,
          "temperature": 0.3, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
          "max_tokens": 1024,
          "stop": ["\n\n"],
@@ -333,7 +336,8 @@ You are a precise data comparison assistant.
 1. Identify the two entities being compared.
 2. Extract the specific values for the attribute in question (e.g., time, cost, score).
 3. Determine the "winner" based on the user's criteria (e.g., who is earlier? who is cheaper?).
-4. Output in a comparison_sentence:
+4. <Attribute Context> is the context of the attribute in question (e.g., time, cost, score).
+5. Output in a comparison_sentence:
 "<Winner Name> + <Attribute Context> + <Comparative Adjective>"
 
 ### Answer
@@ -359,14 +363,14 @@ You are a precise data comparison assistant.
 ### Context
 {context}
 
-
 ### Output Rules
 1. Identify the two entities being compared.
 2. Extract the specific values for the attribute in question (e.g., time, cost, score).
 3. Determine the "winner" based on the user's criteria (e.g., who is earlier? who is cheaper?).
-4. Output in a comparison_sentence:
+4. <Attribute Context> is the context of the attribute in question (e.g., time, cost, score).
+5. Output in a comparison_sentence:
 "<Winner Name> + <Attribute Context> + <Comparative Adjective>"
-5. Answer in Simplified Chinese.
+6. Answer in Simplified Chinese.
 
 ### Answer
 """ 
@@ -374,7 +378,7 @@ You are a precise data comparison assistant.
     context = "\n\n".join([chunk['metadata']['name'] + ": " + chunk['page_content'] for chunk in combined_chunks])
     sub_query = "\n\n".join([f"Question: {query[1]}\nAnswer: {answer}" for query, answer in zip(queries, combined_answers)])
     prompt = prompt.format(query=original_query, context=context, sub_query=sub_query)
-    
+    print("compare_then_generate_answer prompt: \n", prompt)
     ollama_config = load_ollama_config()
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
@@ -390,11 +394,12 @@ You are a precise data comparison assistant.
         final_prompt="""
 ### Role
 You are a Precise Comparison Generator.
-Your task is to write a single, fluent comparison sentence based on the provided "Context" and "Query".
+You will receive a "Comparison Result" string, "Context", and "Question".
+Your task is to write a single, fluent comparison sentence based on the provided Comparison Result.
 
 ### Strict Rules
 1. **Source of Truth:** Trust the **Context** above all else. If the "Comparison Result" fragments contradict the Context (e.g., fragments say "larger" but Context shows numbers are equal), follow the Context.
-2. **Grammar:** Combine the fragments into a fluent sentence. Do not include introductory text.
+2. **Grammar:** Combine the fragments into a fluent sentence. Use the same higer/lower/more/less in the Query to describe the comparison.
 
 ### Sentence Patterns (Must Follow)
 
@@ -402,26 +407,31 @@ Your task is to write a single, fluent comparison sentence based on the provided
 * **Template:** "Both <Entity A> and <Entity B> <action> the same <attribute> of <value>."
 * *Example:* "Both Company A in 2020 and Company B in 2021 distributed the same dividends of $5 million."
 
-**Condition B: IF the values are DIFFERENT (One is higher/more)**
-* **Template:** "<Winner> <action> more/higher <attribute> (<Winner Value>), compared to <Loser>'s <attribute> (<Loser Value>)."
+**Condition B: IF the values are DIFFERENT (One is more/higher/lower/less than the other)**
+* **Template:** "<Winner> <action> more/higher/lower/less <attribute> (<Winner Value>), compared to <Loser>'s <attribute> (<Loser Value>)."
 * *Example:* "Company A distributed more dividends ($10 million) compared to Company B's distribution ($5 million)."
 
-### Input Data
-**Query:**
-{query}
-
-**Context:**
+### Context
 {context}
 
-**Comparison Fragments (Reference Only):**
+### OriginalQuestion
+{query} 
+
+### Sub Question with Answers:
+{sub_query}
+
+### Comparison Fragments (use this to generate answer)
 {answer}
+
+** Use the Comparison Result Fragments and the Context to generate the answer.**
+** First output the <Winner> from the comparison fragments, then complete the sentence.**
 
 ### Natural Sentence
 """
     else:
         final_prompt="""
 ### Instruction
-You are a Natural Language Generator specialized in Chinese text.
+You are a Precise Comparison Generator specialized in Chinese text.
 You will receive a "Comparison Result" string, "Context", and "Question".
 Your task is to convert these into a single, grammatically correct, and strictly formatted **Simplified Chinese** sentence.
 
@@ -451,20 +461,29 @@ Your task is to convert these into a single, grammatically correct, and strictly
    - Query: 谁发生得更早？
    - Answer: A公司的重组发生得更早，发生在2015年，而B公司发生在2018年。
 
-### Input Data
-**Question:**
-{query}
-
-**Context:**
+### Context
 {context}
 
-**Comparison Result Fragments:**
+### OriginalQuestion
+{query} 
+
+### Sub Question with Answers:
+{sub_query}
+
+### Comparison Fragments (use this to generate answer)
 {answer}
+
+** Use the Comparison Result Fragments and the Context to generate the answer.**
+** First output the <Winner> from the comparison fragments, then complete the sentence.**
 
 ### Natural Sentence (in Simplified Chinese)
 """
     context = "\n\n".join([chunk['metadata']['name'] + ": " + chunk['page_content'] for chunk in combined_chunks])
-    prompt = final_prompt.format(answer=answer, query=original_query, context=context)
+    sub_query = "\n\n".join([f"Question: {query[1]}\nAnswer: {answer}" for query, answer in zip(queries, combined_answers)])
+    prompt = final_prompt.format(answer=answer, query=original_query, context=context, sub_query=sub_query)
+    print("final prompt--------------------")
+    print(prompt)
+    print("final prompt--------------------")
     ollama_config = load_ollama_config()
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
@@ -513,10 +532,10 @@ You are a helpful Q&A assistant. Answer the user's question using ONLY the provi
 1. Analyze the Question to understand what specific information is needed.
 2. Scan the Reference Data to find the exact match.
 3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information same **units and formatting** as the reference data. **Do not use full sentences.** Do not repeat the question or the context.
-4. No need to add "。" at the end of the answer.
+4. Add "。" at the end of the answer.
 5. Answer in Simplified Chinese.
 
-**If the answer is not founded or you don't know the answer, state ONLY "无法回答" and no need to explain.**
+**If the answer is not founded or you don't know the answer, state ONLY "无法回答" and no need to explain. No need to add "。" at the end of the answer.**
 
 ### Question
 {query}
@@ -542,3 +561,69 @@ You are a helpful Q&A assistant. Answer the user's question using ONLY the provi
     print("final compare answer: ", answer)
     return answer
     
+def generate_simple_answer(query, context, language="en", doc_names=[]): 
+    if language == 'en':
+        prompt = """
+### Role
+You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question.
+### Task
+Please answer with in one concise answer. Do not repeat the question or the context.
+
+### Steps
+1. Analyze the Question to understand what specific information is needed.
+2. Scan the Reference Data to find the exact match.
+3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information within the reference data.
+4. If the answer is found, write it down.
+5. **Fallback:** If the answer cannot be found in the provided text, strictly output: "Unable to answer."
+6. **Answer MUST end with a period.**
+
+Question:
+{query} 
+
+Context:
+{context} 
+
+### Answer
+    """
+    else:
+        prompt = """
+### Role
+You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question.
+### Task
+Please answer with in one concise answer. Do not repeat the question or the context.
+
+### Steps
+1. Analyze the Question to understand what specific information is needed.
+2. Scan the Reference Data to find the exact match.
+3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information within the reference data.
+4. If the answer is found, write it down.
+5. End of the answer: add the character "。".
+
+**If the answer cannot be found in the provided text, strictly output: "无法回答"** no need to explain, no need to add "。" at the end of the answer.
+
+Question:
+{query} 
+
+Context:
+{context} 
+
+### Answer
+    """
+    context = "\n".join([chunk['page_content'] for chunk in context])
+    prompt = prompt.format(query=query, context=context)
+    
+    ollama_config = load_ollama_config()
+    client = Client(host=ollama_config["host"])
+    response = client.generate(model=ollama_config["model"], options={
+         "temperature": 0.3, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
+         "max_tokens": 1024,
+         "top_p": 0.9,
+         "top_k": 40,
+         "frequency_penalty": 0.5,
+         "presence_penalty": 0.5,
+         "stop": ["\n\n"],
+    }, prompt=prompt)
+
+    answer = response["response"]
+    print("answer: ", answer)
+    return answer

@@ -36,7 +36,7 @@ class BM25Retriever:
         string = re.sub(r"\s+", " ", string)
         return string.strip()
 
-    def retrieve(self, query, top_k=5, top1_check=False, threshold=0):
+    def retrieve(self, query, top_k=0, top1_check=False, threshold=0):
         if self.language == "zh":
             tokenized_query = list(jieba.cut(query))
         else:
@@ -44,9 +44,9 @@ class BM25Retriever:
             tokens = [token for token in tokens if token not in self.stopwords]
             tokenized_query = [self.stemmer.stem(token) for token in tokens]
 
-        scores = self.bm25.get_scores(tokenized_query)
+        scores = self.bm25.get_scores(tokenized_query) 
+        print("scores: ", scores)
         
-        # Get top_k indices sorted by score
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
         
         # Filter by threshold (since sorted, can cut off when score drops below threshold)
@@ -61,6 +61,10 @@ class BM25Retriever:
         
         # Apply top1_check if needed
         if top1_check and len(top_indices) > 1:
+            if (min(scores) < 0):
+                #shift to not minus
+                scores = [score + abs(min(scores)) for score in scores]
+            print("new scores: ", scores)
             top_score = scores[top_indices[0]]
             # Keep only chunks with score > top_score/2
             filtered = []
@@ -73,6 +77,9 @@ class BM25Retriever:
         
         # Get the actual chunks
         top_chunks = [self.chunks[i] for i in top_indices]
+        if (top_k > 0):
+            print("top_chunks: ", top_chunks)
+            top_chunks = top_chunks[:top_k]
         return top_chunks
 
 def create_retriever(chunks, language):
