@@ -7,8 +7,8 @@ def llm_router_chain(query, language):
     query_text = query['query']['content']
     # 1. Do the query expansion
     #new_query = expand_query(query_text, language)
-    #new_query = expand_query_2(query_text, language)  # Best performing - uses LLM reasoning
-    new_query = expand_query_3(query_text, language)  # Uses FAISS dense retrieval (requires FAISS installed)
+    #new_query = expand_query_2(query_text, language)  # LLM reasoning only
+    new_query = expand_query_3(query_text, language)  # Iterative FAISS-based refinement (5 iterations)
     print("new_query: ", new_query)
     # 2. Retrieve chunks
     retrieved_chunks = retrieve_chunks(new_query, language)
