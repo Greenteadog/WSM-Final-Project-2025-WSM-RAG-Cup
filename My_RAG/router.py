@@ -50,10 +50,10 @@ def router(query, language="en"):
         return name_router_chain(query, language, prediction, doc_id, matched_name)
 
     ## Step 4. time_router chain (if temporal entities found)
-    if (entities['years'] or entities['months'] or entities['dates']):
-        print("[Router][4] time_router chain")
-        print(f"[Router] Using temporal filter: years={entities['years']}, months={entities['months']}")
-        return time_router_chain(query, language, doc_id)
+    # if (entities['years'] or entities['months'] or entities['dates']):
+    #     print("[Router][4] time_router chain")
+    #     print(f"[Router] Using temporal filter: years={entities['years']}, months={entities['months']}")
+    #     return time_router_chain(query, language, doc_id)
     
     ## Step 5. LLM chain
     print("[Router][5] LLM chain")

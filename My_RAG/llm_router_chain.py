@@ -5,11 +5,10 @@ from ollama import Client
 
 def llm_router_chain(query, language):
     query_text = query['query']['content']
-    
     # 1. Do the query expansion
-    new_query = expand_query(query_text, language)
-    #new_query = expand_query_2(query_text, language)
-    #new_query = expand_query_3(query_text, language)  # Uses FAISS dense retrieval
+    #new_query = expand_query(query_text, language)
+    #new_query = expand_query_2(query_text, language)  # Best performing - uses LLM reasoning
+    new_query = expand_query_3(query_text, language)  # Uses FAISS dense retrieval (requires FAISS installed)
     print("new_query: ", new_query)
     # 2. Retrieve chunks
     retrieved_chunks = retrieve_chunks(new_query, language)
@@ -99,108 +98,158 @@ def expand_query_2(query, language="en"):
         print(f"Error: {e}")
         return query
 
-def expand_query_3(query, language="en"):
-    # 1. Retrieve with Dense Retrieval
+def expand_query_3(query, language="en", max_iterations=5):
+    """
+    Iteratively expand query using dense retrieval feedback.
+    Continues up to max_iterations times if scores keep improving.
+    
+    Args:
+        query: Original query text
+        language: Language code
+        max_iterations: Maximum number of refinement iterations (default: 3)
+        
+    Returns:
+        Best expanded query found
+    """
+    # Initialize
     row_chunks = get_chunks_from_db(None, [], language)  # Get all chunks
     dense_retriever = DenseRetriever(row_chunks, language=language)
-    retrieved_chunks = dense_retriever.retrieve(query, top_k=5)
-    scores = dense_retriever.get_scores()  # Get cached scores from retrieve()
     
-    # 2. Use prompt template from paper to ask LLM to expand query
-    if language == "zh":
-        prompt = f"""我的目標是重新表述查詢以檢索得分高的答案文檔。
-
-            **範例 1:**
-            原始查詢：公司在2019年3月做了什麼變更？
-            前3個檢索文檔：
-            1. 2019年3月，公司修訂了公司治理政策...
-            2. 該公司在2019年進行了多項改革...
-            3. 公司治理架構在年初進行了調整...
-            分數：['0.650', '0.520', '0.480']
-
-            重新表述的查詢：[2019年3月公司治理政策修訂的具體內容]
-            新分數：['0.850', '0.820', '0.780']  ← 分數提高！
-
-            **範例 2:**
-            原始查詢：誰在2020年被任命為董事？
-            前3個檢索文檔：
-            1. 2020年1月，James Peterson被任命為新董事...
-            2. 董事會在2020年進行了人事變動...
-            3. 公司在年初任命了新的董事成員...
-            分數：['0.720', '0.610', '0.590']
-
-            重新表述的查詢：[2020年1月James Peterson董事任命]
-            新分數：['0.920', '0.880', '0.850']  ← 分數提高！
-
-            ---
-
-            **現在輪到你了:**
-            查詢：{query}
-
-            前5個檢索文檔：
-            {chr(10).join([f"{i+1}. {chunk['page_content'][:200]}..." for i, chunk in enumerate(retrieved_chunks)])}
-
-            分數：{[f'{s:.3f}' for s in scores]}
-
-            請寫一個新的重新表述的查詢，與舊查詢不同，並且盡可能獲得高分。
-            請將文本寫在方括號中。"""
-    else:
-        prompt = f"""My goal is to make rephrased query to retrieve answer documents with high scores.
-
-            **Example 1:**
-            Original Query: What changes did the company make in March 2019?
-            TOP-3 retrieved docs:
-            1. In March 2019, the company revised its corporate governance policy...
-            2. The company made several reforms in 2019...
-            3. Corporate governance structure was adjusted at the beginning of the year...
-            Scores: ['0.650', '0.520', '0.480']
-
-            Rephrased Query: [March 2019 corporate governance policy revision details]
-            New Scores: ['0.850', '0.820', '0.780']  ← Score improved!
-
-            **Example 2:**
-            Original Query: Who was appointed as director in 2020?
-            TOP-3 retrieved docs:
-            1. In January 2020, James Peterson was appointed as new director...
-            2. The board underwent personnel changes in 2020...
-            3. The company appointed new board members at the start of the year...
-            Scores: ['0.720', '0.610', '0.590']
-
-            Rephrased Query: [January 2020 James Peterson director appointment]
-            New Scores: ['0.920', '0.880', '0.850']  ← Score improved!
-
-            ---
-
-            **Now it's your turn:**
-            Query: {query}
-
-            TOP-5 retrieved docs:
-            {chr(10).join([f"{i+1}. {chunk['page_content'][:200]}..." for i, chunk in enumerate(retrieved_chunks)])}
-
-            Scores: {[f'{s:.3f}' for s in scores]}
-
-            Write your new rephrased query that is different from the old ones and has a score as high as possible.
-            Write the text in square brackets."""
+    current_query = query
+    best_query = query
+    best_avg_score = 0.0
     
-    print("prompt: ", prompt)
-    # 3. Return expanded query
-    try:
-        client = Client()
-        response = client.generate(model="granite4:3b", prompt=prompt, stream=False)
-        full_response = response.get("response", "").strip()
+    print(f"[QueryExpansion] Starting iterative retrieval (max {max_iterations} iterations)")
+    
+    for iteration in range(max_iterations):
+        print(f"\n[QueryExpansion] Iteration {iteration + 1}/{max_iterations}")
+        print(f"[QueryExpansion] Current query: {current_query}")
         
-        # Extract text from square brackets
-        import re
-        match = re.search(r'\[(.*?)\]', full_response)
-        if match:
-            expanded_query = match.group(1).strip()
+        # 1. Retrieve with current query
+        retrieved_chunks = dense_retriever.retrieve(current_query, top_k=5)
+        scores = dense_retriever.get_scores()  # Get cached scores from retrieve()
+        
+        # Calculate average score
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        print(f"[QueryExpansion] Scores: {[f'{s:.3f}' for s in scores]}, Avg: {avg_score:.3f}")
+        
+        # Check if scores improved
+        if avg_score > best_avg_score:
+            best_avg_score = avg_score
+            best_query = current_query
+            print(f"[QueryExpansion] ✓ Score improved! New best avg: {best_avg_score:.3f}")
         else:
-            # Fallback: use the whole response if no brackets found
-            expanded_query = full_response
-        return expanded_query
-    except Exception as e:
-        print(f"Error: {e}")
-        return query
+            print(f"[QueryExpansion] ✗ Score did not improve ({avg_score:.3f} <= {best_avg_score:.3f})")
+            print(f"[QueryExpansion] Stopping iteration, returning best query")
+            break
+        
+        # If this is the last iteration, don't generate a new query
+        if iteration == max_iterations - 1:
+            print(f"[QueryExpansion] Reached max iterations, returning best query")
+            break
+        
+        # 2. Generate rephrased query using LLM
+        if language == "zh":
+            prompt = f"""我的目標是重新表述查詢以檢索得分高的答案文檔。
+
+                **範例 1:**
+                原始查詢：公司在2019年3月做了什麼變更？
+                前3個檢索文檔：
+                1. 2019年3月，公司修訂了公司治理政策...
+                2. 該公司在2019年進行了多項改革...
+                3. 公司治理架構在年初進行了調整...
+                分數：['0.650', '0.520', '0.480']
+
+                重新表述的查詢：[2019年3月公司治理政策修訂的具體內容]
+                新分數：['0.850', '0.820', '0.780']  ← 分數提高！
+
+                **範例 2:**
+                原始查詢：誰在2020年被任命為董事？
+                前3個檢索文檔：
+                1. 2020年1月，James Peterson被任命為新董事...
+                2. 董事會在2020年進行了人事變動...
+                3. 公司在年初任命了新的董事成員...
+                分數：['0.720', '0.610', '0.590']
+
+                重新表述的查詢：[2020年1月James Peterson董事任命]
+                新分數：['0.920', '0.880', '0.850']  ← 分數提高！
+
+                ---
+
+                **現在輪到你了:**
+                當前查詢：{current_query}
+                當前平均分數：{avg_score:.3f}
+
+                前5個檢索文檔：
+                {chr(10).join([f"{i+1}. {chunk['page_content'][:200]}..." for i, chunk in enumerate(retrieved_chunks)])}
+
+                分數：{[f'{s:.3f}' for s in scores]}
+
+                請寫一個新的重新表述的查詢，與當前查詢不同，並且盡可能獲得更高分數。
+                請將文本寫在方括號中。"""
+        else:
+            prompt = f"""My goal is to make rephrased query to retrieve answer documents with high scores.
+
+                **Example 1:**
+                Original Query: What changes did the company make in March 2019?
+                TOP-3 retrieved docs:
+                1. In March 2019, the company revised its corporate governance policy...
+                2. The company made several reforms in 2019...
+                3. Corporate governance structure was adjusted at the beginning of the year...
+                Scores: ['0.650', '0.520', '0.480']
+
+                Rephrased Query: [March 2019 corporate governance policy revision details]
+                New Scores: ['0.850', '0.820', '0.780']  ← Score improved!
+
+                **Example 2:**
+                Original Query: Who was appointed as director in 2020?
+                TOP-3 retrieved docs:
+                1. In January 2020, James Peterson was appointed as new director...
+                2. The board underwent personnel changes in 2020...
+                3. The company appointed new board members at the start of the year...
+                Scores: ['0.720', '0.610', '0.590']
+
+                Rephrased Query: [January 2020 James Peterson director appointment]
+                New Scores: ['0.920', '0.880', '0.850']  ← Score improved!
+
+                ---
+
+                **Now it's your turn:**
+                Current Query: {current_query}
+                Current Avg Score: {avg_score:.3f}
+
+                TOP-5 retrieved docs:
+                {chr(10).join([f"{i+1}. {chunk['page_content'][:200]}..." for i, chunk in enumerate(retrieved_chunks)])}
+
+                Scores: {[f'{s:.3f}' for s in scores]}
+
+                Write your new rephrased query that is different from the current one and has a score as high as possible.
+                Write the text in square brackets."""
+        
+        # 3. Get rephrased query from LLM
+        try:
+            client = Client()
+            response = client.generate(model="granite4:3b", prompt=prompt, stream=False)
+            full_response = response.get("response", "").strip()
+            
+            # Extract text from square brackets
+            import re
+            match = re.search(r'\[(.*?)\]', full_response)
+            if match:
+                current_query = match.group(1).strip()
+                print(f"[QueryExpansion] Generated new query: {current_query}")
+            else:
+                # Fallback: use the whole response if no brackets found
+                current_query = full_response
+                print(f"[QueryExpansion] No brackets found, using full response: {current_query}")
+        except Exception as e:
+            print(f"[QueryExpansion] Error generating query: {e}")
+            break
+    
+    print(f"\n[QueryExpansion] Final best query: {best_query}")
+    print(f"[QueryExpansion] Final best avg score: {best_avg_score:.3f}")
+    return best_query
+
 
 def retrieve_chunks(query, language="en", doc_ids=[]):
     row_chunks = get_chunks_from_db(None, doc_ids, language)
