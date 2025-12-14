@@ -6,13 +6,13 @@ from ollama import Client
 def llm_router_chain(query, language):
     query_text = query['query']['content']
     # 1. Do the query expansion
-    #new_query = expand_query(query_text, language)
-    #new_query = expand_query_2(query_text, language)  # Best performing - uses LLM reasoning
-    new_query = expand_query_3(query_text, language)  # Uses FAISS dense retrieval (requires FAISS installed)
+    new_query = expand_query(query_text, language)
+    #new_query = expand_query_2(query_text, language)  # LLM reasoning only
+    #new_query = expand_query_3(query_text, language)  # Iterative FAISS-based refinement (5 iterations)
     print("new_query: ", new_query)
     # 2. Retrieve chunks
     retrieved_chunks = retrieve_chunks(new_query, language)
-    # retrieved_chunks = retrieve_chunks_with_dense(new_query, language)
+    #retrieved_chunks = retrieve_chunks_with_dense(new_query, language)
     # 3. Generate answer
     answer = generate_answer_llm(new_query, retrieved_chunks, language)
     # 4. Return answer and chunks
@@ -98,7 +98,7 @@ def expand_query_2(query, language="en"):
         print(f"Error: {e}")
         return query
 
-def expand_query_3(query, language="en", max_iterations=5):
+def expand_query_3(query, language="en", max_iterations=3):
     """
     Iteratively expand query using dense retrieval feedback.
     Continues up to max_iterations times if scores keep improving.
@@ -254,13 +254,13 @@ def expand_query_3(query, language="en", max_iterations=5):
 def retrieve_chunks(query, language="en", doc_ids=[]):
     row_chunks = get_chunks_from_db(None, doc_ids, language)
     retriever = create_retriever(row_chunks, language)
-    retrieved_chunks = retriever.retrieve(query, top_k=10)
+    retrieved_chunks = retriever.retrieve(query, top_k=10, threshold=30)
     return retrieved_chunks
 
 def retrieve_chunks_with_dense(query, language="en", doc_ids=[]):
     row_chunks = get_chunks_from_db(None, doc_ids, language)
     retriever = DenseRetriever(row_chunks, language)
-    retrieved_chunks = retriever.retrieve(query, top_k=10, threshold=0.3)  # Lowered threshold
+    retrieved_chunks = retriever.retrieve(query, top_k=10, threshold=0.5)  # Lowered threshold
     return retrieved_chunks
 
 def generate_answer_llm(query, retrieved_chunks, language="en"):
