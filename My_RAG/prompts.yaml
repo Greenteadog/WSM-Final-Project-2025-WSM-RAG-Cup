@@ -36,28 +36,26 @@ default:
     ### Answer
 
   zh: |
+    ### 指示
     ### Instruction
-    你是一个问答助手。根据提供的参考资料回答问题。
+    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
 
-    ### 要求
-    1. **只使用参考资料中的信息**，不要编造内容。
-    2. **直接复制参考资料中的关键词和短语**。
-    3. 答案要简洁，只回答问题所问的内容。
-    4. 以"。"结尾。
-    5. 如果无法回答，只回复"无法回答"。
+    ### Steps
+    1. Analyze the Question to understand what specific information is needed.
+    2. Scan the Reference Data to find the exact match.
+    3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information same **units and formatting** as the reference data. Do not use full sentences. Do not repeat the question or the context.
+    4. Answer in Simplified Chinese.
+    **If the answer is not founded or you don't know the answer, state "无法回答". no need to explain.**
 
-    ### 示例
-    **问题:** 绿源环保有限公司在2017年4月发生了什么事故？
-    **参考资料:** 在2017年4月，绿源环保有限公司发生了一起严重的废水泄漏事故，对周边环境和社区造成了污染。
-    **答案:** 严重的废水泄漏事故。
-
-    ### 问题
+    ### Question
     {query}
 
-    ### 参考资料
+    ### Reference Data
+    <data>
     {context}
+    </data>
 
-    ### 答案
+    ### Answer
 
 
 llm_chain:
@@ -92,26 +90,22 @@ llm_chain:
     ### Answer
   
   zh: |
-    ### Instruction
-    你是一个分析型问答助手。根据参考资料回答问题。
+    ### 指示
+    你是一個專門處理模糊或一般性查詢的分析型問答助手。問題可能缺乏具體的主題、名稱、日期或其他具體細節。你的任務是從參考資料中綜合信息，提供有意義的答案。
 
-    ### 要求
-    1. **只使用参考资料中的信息**，不要编造或添加额外内容。
-    2. **直接引用参考资料中的原文**。
-    3. 答案要完整、准确。
-    4. 以"。"结尾。
-    5. 用简体中文回答。
-    6. 如果无法回答，只回复"无法回答"。
+    **以下四點非常重要!!!請絕對遵守：**
+    **僅使用提供的參考資料。不要使用外部知識或做出超出上下文明確陳述的假設。**
+    **如果無法根據參考資料提供有意義的答案，請回答「無法回答」，無需解釋。**
+    **確保答案的完整性。**
+    **答案結尾絕對要是句號。**
 
-    ### 示例
-    **问题:** 公司如何支持环境保护计划？
-    **答案:** 公司在2017年2月投资于碳抵消项目，通过林业项目和可再生能源项目来抵消其碳排放。同时在2017年6月实施了节能减排项目，减少了能源消耗。最后在2017年8月开发了环保型产品。
-
-    ### 问题
+    ### 問題
     {query}
 
-    ### 参考资料
+    ### 參考資料
+    <data>
     {context}
+    </data>
 
     ### 答案
 
@@ -148,21 +142,29 @@ summary_chain:
     ### Answer
 
   zh: |
-    ### Instruction
-    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
+    ### 指示
+    你是一個有幫助的問答助手。僅使用提供的參考資料來回答用戶的問題。
 
-    ### 要求
-    1. 分析问题，理解需要的信息。
-    2. 从文档中找到相关句子。
-    3. **只使用文档中的信息**，不要编造内容。
-    4. 用简体中文回答，以"。"结尾。
-    5. 如果无法回答，只回复"无法回答"。
+    ### 步驟
+    1. 分析問題以了解需要什麼具體信息。
+    2. 閱讀整篇文章，並找出相關句子。
+    3. 找回的相似句子可以是一個或多個。請以JSON格式輸出回答，如下所示：
+    {{
+        "retrieve": ["相關句子1", "相關句子2", ...],
+        "answer": "答案內容必須以引號括起來。"
+    }}
 
-    ### 问题
+    **如果找不到答案或你不知道答案，請回答「無法回答」，無需解釋。**
+    **確保答案的完整性。**
+    **答案結尾一定絕對要是句號。**
+
+    ### 問題
     {query}
 
-    ### 文档
+    ### 文章
+    <data>
     {context}
+    </data>
 
     ### 答案
 
