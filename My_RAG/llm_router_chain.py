@@ -2,19 +2,24 @@ from retriever import create_retriever, get_chunks_from_db
 from retriever import DenseRetriever
 from generator import generate_answer
 from ollama import Client
+from classifier import classify_query
 
 def llm_router_chain(query, language):
     query_text = query['query']['content']
+    
+    # 0. Classify query
+    query_type = classify_query(query_text, language)
+
     # 1. Do the query expansion
-    new_query = expand_query(query_text, language)
-    #new_query = expand_query_2(query_text, language)  # LLM reasoning only
-    #new_query = expand_query_3(query_text, language)  # Iterative FAISS-based refinement (5 iterations)
+    #new_query = expand_query(query_text, language)
+    new_query = expand_query_2(query_text, language)  # Best performing - uses LLM reasoning
+    #new_query = expand_query_3(query_text, language)  # Uses FAISS dense retrieval (requires FAISS installed)
     print("new_query: ", new_query)
     # 2. Retrieve chunks
     retrieved_chunks = retrieve_chunks(new_query, language)
     #retrieved_chunks = retrieve_chunks_with_dense(new_query, language)
     # 3. Generate answer
-    answer = generate_answer_llm(new_query, retrieved_chunks, language)
+    answer = generate_answer_llm(query_text, retrieved_chunks, language, query_type)
     # 4. Return answer and chunks
     return answer, retrieved_chunks
 
@@ -263,7 +268,9 @@ def retrieve_chunks_with_dense(query, language="en", doc_ids=[]):
     retrieved_chunks = retriever.retrieve(query, top_k=10, threshold=0.5)  # Lowered threshold
     return retrieved_chunks
 
-def generate_answer_llm(query, retrieved_chunks, language="en"):
+def generate_answer_llm(query, retrieved_chunks, language="en", prompt_type="default"):
     from generator import generate_answer as gen_answer
-    answer = gen_answer(query, retrieved_chunks, language, type="llm_chain")
+    if prompt_type == "general":
+        prompt_type = "default"
+    answer = gen_answer(query, retrieved_chunks, language, type=prompt_type)
     return answer
