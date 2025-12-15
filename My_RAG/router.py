@@ -56,9 +56,9 @@ def router(query, language="en"):
         print("[Router][3] name_router chain")
         return name_router_chain(query, language, prediction, doc_id, matched_name)
 
-    if is_short_title_doc(doc_id):
-        print("Use summary chain for short title document")
-        return summary_router_chain(query, language, doc_id)
+    # if is_short_title_doc(doc_id):
+    #     print("Use summary chain for short title document")
+    #     return summary_router_chain(query, language, doc_id)
 
     ## Step 4. time_router chain (if temporal entities found)
     # if (entities['years'] or entities['months'] or entities['dates']):
