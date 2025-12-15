@@ -329,7 +329,7 @@ You are a precise data comparison assistant.
 **Sub Question with Answers:**
 {sub_query}
 
-### Context
+### Combined Context
 {context}
 
 ### Output Rules
@@ -356,11 +356,10 @@ You are a precise data comparison assistant.
 **Original Question:**
 {query} 
 
-
 **Sub Question with Answers:**
 {sub_query}
 
-### Context
+### Combined Context
 {context}
 
 ### Output Rules
@@ -596,8 +595,7 @@ Please answer with in one concise answer. Do not repeat the question or the cont
 1. Analyze the Question to understand what specific information is needed.
 2. Scan the Reference Data to find the exact match.
 3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information within the reference data.
-4. If the answer is found, write it down.
-5. End of the answer: add the character "。".
+4. If the answer is found, write it down, and add the character "。" at the end of the answer.
 
 **If the answer cannot be found in the provided text, strictly output: "无法回答"** no need to explain, no need to add "。" at the end of the answer.
 
