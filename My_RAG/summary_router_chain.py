@@ -52,7 +52,7 @@ def summary_router_chain(query, language, doc_ids):
     contents = get_contents_from_db(target_doc_ids=doc_ids)
     context = [{"page_content": content} for content in contents]
     
-    raw_response = generate_answer(query_text, context, language, prompt_type="summary_chain")
+    raw_response = generate_answer(query_text, context, language, prompt_type="summary")
     
     try:
         result_json = json.loads(raw_response)
@@ -71,7 +71,7 @@ def summary_router_chain(query, language, doc_ids):
     
     except json.JSONDecodeError:
         print("JSON Parse Error. Retry with fallback prompt")
-        answer = generate_answer(query_text, context, language, prompt_type="summary_chain_json_fallback")
+        answer = generate_answer(query_text, context, language, prompt_type="summary")
         if (language == "en" and answer == "Unable to answer") or (language == "zh" and answer == "无法回答"):
             context = [{"page_content": ""}]
         
