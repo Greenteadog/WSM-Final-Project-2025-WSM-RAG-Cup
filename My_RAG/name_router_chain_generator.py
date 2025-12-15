@@ -12,26 +12,42 @@ def query_classifier(query, language="en"):
     if (language == 'en'):
         prompt = """
 ### Role
-You are a Query Classifier.
+You are a Query Intent Classifier.
 
 ### Task
-Analyze the user's query and classify it into one of two categories:
-1. "SIMPLE": A direct factual question looking for a single specific attribute, definition, or fact about a single entity.
-2. "COMPLEX": A question that requires comparing two or more entities, aggregating data (counting, summing), or reasoning across multiple timeframes (multi-hop).
+Analyze the "User Query" and predict the complexity of the answer required.
+Classify the query into one of two categories: **SIMPLE** or **COMPLEX**.
+
+### Classification Rules
+
+**1. SIMPLE (Direct Lookup)**
+* **Definition:** The answer is explicitly written in the text as a single attribute. You do not need to calculate anything.
+* **Includes:** Names, Dates, Locations, Prices, ID numbers, or a pre-calculated total (e.g., "What is the Total Revenue?").
+* **Keywords:** "When", "Who", "What is the ID", "What amount".
+
+**2. COMPLEX (Calculation & Aggregation)**
+* **Definition:** The answer requires **Counting** items, **Summing** values, or **Listing** multiple things. If the model has to count "1, 2, 3..." to get the answer, it is COMPLEX.
+* **Includes:** Counting frequency, Listing items, Comparing A vs B, Explaining "How".
+* **Keywords:** "How many items" (几项), "Count" (统计), "List all" (列出), "Difference" (区别), "How" (如何).
+
+### Critical Distinction: "Numbers"
+* "What is the price?" -> **SIMPLE** (The number exists in the text).
+* "How many products were sold?" -> **COMPLEX** (You must count the rows/items).
+
+### Examples for Training
+* "What is the CEO's name?" -> **SIMPLE** (Lookup Name)
+* "What is the total cost listed on the invoice?" -> **SIMPLE** (Lookup pre-existing number)
+* "How many times did the CEO visit the factory?" -> **COMPLEX** (Counting required)
+* "List all board members." -> **COMPLEX** (Listing required)
+* "进行了几项？" -> **COMPLEX** (Requires counting the exam items)
+* "进行了几个？" -> **COMPLEX** (Requires counting the exam items)
+
+### Input Data
+User Query: {query}
 
 ### Output
-Return ONLY the category name: "SIMPLE" or "COMPLEX".
-
-### Examples
-Query: "When did Green Fields Agriculture Ltd. appoint a new CEO?" -> SIMPLE
-Query: "What percentage of equity did Green Fields Agriculture Co. acquire from Fertile Land Farms in September 2018?" -> SIMPLE
-Query: "According to the hospitalization records of Bridgewater General Hospital, what is the preliminary diagnosis for J. Reyes?" -> SIMPLE
-Query: "According to the judgment of Charleston, Linden, Court, what is the total amount of damage caused by J. Gonzalez in all her crimes?" -> COMPLEX
-Query: "How did compliance and regulatory updates in May 2019 contribute to reduced legal risk by December 2019?" -> COMPLEX
-Query: "List all events for Company A and Company B." -> COMPLEX
-
-### User Query
-{query}
+Reasoning: [One sentence explaining why]
+Label: [SIMPLE or COMPLEX]
     """
     else:
         prompt = """
@@ -68,6 +84,7 @@ Classify the query into one of two categories: **SIMPLE** or **COMPLEX**.
 
 ### Input Data
 User Query: {query}
+
 ### Output
 Reasoning: [One sentence explaining why]
 Label: [SIMPLE or COMPLEX]
@@ -80,7 +97,7 @@ Label: [SIMPLE or COMPLEX]
          "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
          "top_p": 0.9,
          "top_k": 40,
-         "max_tokens": 2048,
+         "max_tokens": 1024,
         #  "stream": True,
     }, prompt=prompt)
     print("query_classifier: ", response["response"])
@@ -96,7 +113,10 @@ You are a precise Document Summarizer.
 Answer the user's question by synthesizing the provided context.
 Your output must be a single, fluent narrative sentence that cites the specific court and provides the exact supporting informations.
 Only output the answer, do not include any additional text.
-If you are not able to answer the question, output "Unable to answer.".
+
+### Strict Rules
+1. **Context Only:** Base your answer **strictly** on the provided Context. Do not use external knowledge.
+2. **No Hallucination:** If the answer is not in the context, output "Unable to answer.".
 
 ### Reference Data
 <context>
@@ -159,7 +179,7 @@ Answer in Simplified Chinese.
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
         "num_ctx": 32768,
-        "temperature": 0.3, 
+        "temperature": 0.1, 
         "max_tokens": 1024,
         "top_p": 0.9,
         "top_k": 40,
@@ -228,7 +248,7 @@ Context:
     ollama_config = load_ollama_config()
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
-         "temperature": 0.3, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
+         "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
          "max_tokens": 1024,
          "top_p": 0.9,
          "top_k": 40,
@@ -500,7 +520,7 @@ def generate_medical_answer(query, docs, language):
     if language == "en":
         prompt = """
 ### Instruction
-You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
+You are a helpful Q&A assistant. Answer the user's question using **ONLY** the provided reference data.
 
 ### Steps
 1. Analyze the Question to understand what specific information is needed.
@@ -509,6 +529,7 @@ You are a helpful Q&A assistant. Answer the user's question using ONLY the provi
 4. Use "." to end the answer.
 
 **If the answer is not founded or you don't know the answer, state "Unable to answer." no need to explain.**
+**Do NOT hallucinate or make up information not present in the data.**
 **Ensure the answer's completeness.**
 **Answer MUST end with a period.**
 
@@ -551,7 +572,7 @@ You are a helpful Q&A assistant. Answer the user's question using ONLY the provi
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
         "num_ctx": 32768,
-        "temperature": 0.3, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
+        "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
         "max_tokens": 1024,
         "stop": ["\n\n"],
     }, prompt=prompt)
@@ -559,7 +580,66 @@ You are a helpful Q&A assistant. Answer the user's question using ONLY the provi
     answer = response["response"]
     print("final compare answer: ", answer)
     return answer
-    
+
+def question_and_answer_classifier(query, answer, language="en", doc_names=[]):
+    prompt= """
+### Role
+You are a Query Intent Classifier.
+
+### Task
+Analyze the "User Query" and predict the complexity of the answer required.
+Classify the query and pre-answer into one of two categories: **SIMPLE** or **COMPLEX**.
+
+### Classification Rules
+
+**1. SIMPLE (Direct Lookup)**
+* **Definition:** The answer is explicitly written in the text as a single attribute. You do not need to calculate anything.
+* **Includes:** Names, Dates, Locations, Prices, ID numbers, or a pre-calculated total (e.g., "What is the Total Revenue?").
+* **Keywords:** "When", "Who", "What is the ID", "What amount".
+
+**2. COMPLEX (Calculation & Aggregation)**
+* **Definition:** The answer requires **Counting** items, **Summing** values, or **Listing** multiple things. If the model has to count "1, 2, 3..." to get the answer, it is COMPLEX.
+* **Includes:** Counting frequency, Listing items, Comparing A vs B, Explaining "How".
+* **Keywords:** "How many items" (几项), "Count" (统计), "List all" (列出), "Difference" (区别), "How" (如何).
+
+### Input Data
+User Query: {query}
+
+### Output
+Reasoning: [One sentence explaining why]
+Label: [SIMPLE or COMPLEX]
+
+### Query and Pre-Answer
+{query}: {answer}
+
+### Output
+Reasoning: [One sentence explaining why]
+Label: [SIMPLE or COMPLEX]
+    """
+    prompt = prompt.format(answer=answer, query=query)
+    ollama_config = load_ollama_config()
+    client = Client(host=ollama_config["host"])
+    response = client.generate(model=ollama_config["model"], options={
+         "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
+         "max_tokens": 1024,
+         "top_p": 0.9,
+         "top_k": 40,
+         "frequency_penalty": 0.5,
+         "presence_penalty": 0.5,
+         "stop": ["\n\n"],
+    }, prompt=prompt)
+
+    answer = response["response"]
+    return answer
+
+
+def fallback_to_simple_check(query, answer, language="en", doc_names=[]):
+    response = question_and_answer_classifier(query=query, answer=answer, language=language)
+    print("fallback to simple check: ", response)
+    if "SIMPLE" in response.upper():
+        return True
+    return False
+
 def generate_simple_answer(query, context, language="en", doc_names=[]): 
     if language == 'en':
         prompt = """
@@ -614,7 +694,7 @@ Context:
     ollama_config = load_ollama_config()
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
-         "temperature": 0.3, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
+         "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
          "max_tokens": 1024,
          "top_p": 0.9,
          "top_k": 40,

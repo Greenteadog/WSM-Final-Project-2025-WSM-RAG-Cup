@@ -7,7 +7,7 @@ from ollama import Client
 import ast
 from generator import generate_answer
 import json
-from name_router_chain_generator import generate_sub_query_answer, generate_combined_questions_answer, construct_multiple_questions, compare_then_generate_answer, query_classifier, generate_complex_answer, generate_medical_answer, generate_simple_answer
+from name_router_chain_generator import generate_sub_query_answer, generate_combined_questions_answer, construct_multiple_questions, compare_then_generate_answer, query_classifier, generate_complex_answer, generate_medical_answer, generate_simple_answer, fallback_to_simple_check
 import sqlite3
 import os
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../db/dataset.db'))
@@ -18,7 +18,12 @@ def name_router_chain(query, language="en", prediction=None, doc_ids=[], doc_nam
         query_type = query_classifier(query_text, language)
         if ("COMPLEX" in query_type):
             print("[Single Path-COMPLEX] query_text: ", query_text)
-            return breakdown_path(query_text, language, prediction, doc_ids, doc_names)
+            answer, return_chunks = breakdown_path(query_text, language, prediction, doc_ids, doc_names)
+            #fallback to check with simple answer
+            if ("无法回答" not in answer and 'Unable to answer' not in answer):
+                if (fallback_to_simple_check(query_text, answer, language, doc_names)):
+                    return single_path(query_text, language, prediction, doc_ids, doc_names)
+            return answer, return_chunks
         if (prediction == "Medical"):
             return single_medical_path(query_text, language, prediction, doc_ids, doc_names)
         return single_path(query_text, language, prediction, doc_ids, doc_names)
@@ -213,7 +218,7 @@ def breakdown_path(query_text, language="en", prediction=None, doc_ids=[], doc_n
         answer = generate_combined_questions_answer(query_text, queries, combined_answers, combined_chunks, language)
     
     # Test for without fine-tune retrieve
-    # return answer, combined_chunks
+    return answer, combined_chunks
 
     if ("无法回答" in answer or 'Unable to answer' in answer):
         return answer, combined_chunks
