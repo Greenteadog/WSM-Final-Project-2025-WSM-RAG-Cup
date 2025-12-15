@@ -182,30 +182,44 @@ def breakdown_path(query_text, language="en", prediction=None, doc_ids=[], doc_n
         retrieved_chunks = []
         retrieved_chunks.extend(retrieve_bigger_chunks(sub_query, language, prediction, single_doc_id, doc_names))
         
-        # answer = generate_sub_query_answer(sub_query, retrieved_chunks, language)
+        if (language == 'en'):
+            answer = generate_sub_query_answer(sub_query, retrieved_chunks, language)
+            # 2. Retrieve smaller chunks(use BM25)
+            print("[2] retrieve with smaller chunks and extract document name:")
+            small_retrieved_chunks, small_chunks = create_smaller_chunks_without_names(language, retrieved_chunks, doc_names)
+            query_text_for_small_retriever = modified_query_text
+            if ("无法回答" not in answer and 'Unable to answer' not in answer):
+                retrieve_answer = get_remove_names_from_text(answer, doc_names)
+                query_text_for_small_retriever = modified_query_text + " " + retrieve_answer
 
-        # # 2. Retrieve smaller chunks(use BM25)
-        print("[2] retrieve with smaller chunks and extract document name:")
-        small_retrieved_chunks, small_chunks = create_smaller_chunks_without_names(language, retrieved_chunks, doc_names)
-        retriever_2 = create_retriever(small_retrieved_chunks, language)
-        retrieved_small_chunks = retriever_2.retrieve(modified_query_text, top1_check=True) # retrieve for higher than the top 1 score * 0.5
-        return_chunks = []
-        for index, chunk in enumerate(retrieved_small_chunks):
-            return_chunks.append(small_chunks[chunk['chunk_index']])
-
-        # 3. Generate Answer
-        print("[3] generate answer:")
-        answer = generate_sub_query_answer(sub_query, return_chunks, language)
-        if ("无法回答" not in answer and 'Unable to answer' not in answer):
-            #4. Fine-tune retriever
-            retrieve_answer = get_remove_names_from_text(answer, doc_names)
-            final_retrieve = retrieve_answer
-            print("[4] rerieve for final answer: {}".format(final_retrieve))
-            retrieved_small_chunks = retriever_2.retrieve(final_retrieve, top1_check=True) # retrieve for higher than the top 1 score * 0.5
+            retriever_2 = create_retriever(small_retrieved_chunks, language)
+            retrieved_small_chunks = retriever_2.retrieve(query_text_for_small_retriever, top1_check=True) # retrieve for higher than the top 1 score * 0.5
             return_chunks = []
             for index, chunk in enumerate(retrieved_small_chunks):
                 return_chunks.append(small_chunks[chunk['chunk_index']])
-            print('final chunks: ', len(return_chunks))
+        else:
+            # # 2. Retrieve smaller chunks(use BM25)
+            print("[2] retrieve with smaller chunks and extract document name:")
+            small_retrieved_chunks, small_chunks = create_smaller_chunks_without_names(language, retrieved_chunks, doc_names)
+            retriever_2 = create_retriever(small_retrieved_chunks, language)
+            retrieved_small_chunks = retriever_2.retrieve(modified_query_text, top1_check=True) # retrieve for higher than the top 1 score * 0.5
+            return_chunks = []
+            for index, chunk in enumerate(retrieved_small_chunks):
+                return_chunks.append(small_chunks[chunk['chunk_index']])
+
+            # 3. Generate Answer
+            print("[3] generate answer:")
+            answer = generate_sub_query_answer(sub_query, return_chunks, language)
+            if ("无法回答" not in answer and 'Unable to answer' not in answer):
+                #4. Fine-tune retriever
+                retrieve_answer = get_remove_names_from_text(answer, doc_names)
+                final_retrieve = retrieve_answer
+                print("[4] rerieve for final answer: {}".format(final_retrieve))
+                retrieved_small_chunks = retriever_2.retrieve(final_retrieve, top1_check=True) # retrieve for higher than the top 1 score * 0.5
+                return_chunks = []
+                for index, chunk in enumerate(retrieved_small_chunks):
+                    return_chunks.append(small_chunks[chunk['chunk_index']])
+                print('final chunks: ', len(return_chunks))
 
         combined_chunks.extend(return_chunks)
         combined_answers.append(answer)
