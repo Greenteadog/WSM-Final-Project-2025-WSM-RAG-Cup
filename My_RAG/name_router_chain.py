@@ -7,7 +7,7 @@ from ollama import Client
 import ast
 from generator import generate_answer
 import json
-from name_router_chain_generator import generate_sub_query_answer, generate_combined_questions_answer, construct_multiple_questions, compare_then_generate_answer, query_classifier, generate_complex_answer, generate_medical_answer, generate_simple_answer
+from name_router_chain_generator import generate_sub_query_answer, generate_combined_questions_answer, construct_multiple_questions, compare_then_generate_answer, query_classifier, generate_complex_answer, generate_medical_answer, generate_simple_answer, fallback_to_simple_check
 import sqlite3
 import os
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../db/dataset.db'))
@@ -18,7 +18,12 @@ def name_router_chain(query, language="en", prediction=None, doc_ids=[], doc_nam
         query_type = query_classifier(query_text, language)
         if ("COMPLEX" in query_type):
             print("[Single Path-COMPLEX] query_text: ", query_text)
-            return breakdown_path(query_text, language, prediction, doc_ids, doc_names)
+            answer, return_chunks = breakdown_path(query_text, language, prediction, doc_ids, doc_names)
+            #fallback to check with simple answer
+            if ("无法回答" not in answer and 'Unable to answer' not in answer):
+                if (fallback_to_simple_check(query_text, answer, language, doc_names)):
+                    return single_path(query_text, language, prediction, doc_ids, doc_names)
+            return answer, return_chunks
         if (prediction == "Medical"):
             return single_medical_path(query_text, language, prediction, doc_ids, doc_names)
         return single_path(query_text, language, prediction, doc_ids, doc_names)
@@ -177,30 +182,44 @@ def breakdown_path(query_text, language="en", prediction=None, doc_ids=[], doc_n
         retrieved_chunks = []
         retrieved_chunks.extend(retrieve_bigger_chunks(sub_query, language, prediction, single_doc_id, doc_names))
         
-        # answer = generate_sub_query_answer(sub_query, retrieved_chunks, language)
+        if (language == 'en'):
+            answer = generate_sub_query_answer(sub_query, retrieved_chunks, language)
+            # 2. Retrieve smaller chunks(use BM25)
+            print("[2] retrieve with smaller chunks and extract document name:")
+            small_retrieved_chunks, small_chunks = create_smaller_chunks_without_names(language, retrieved_chunks, doc_names)
+            query_text_for_small_retriever = modified_query_text
+            if ("无法回答" not in answer and 'Unable to answer' not in answer):
+                retrieve_answer = get_remove_names_from_text(answer, doc_names)
+                query_text_for_small_retriever = modified_query_text + " " + retrieve_answer
 
-        # # 2. Retrieve smaller chunks(use BM25)
-        print("[2] retrieve with smaller chunks and extract document name:")
-        small_retrieved_chunks, small_chunks = create_smaller_chunks_without_names(language, retrieved_chunks, doc_names)
-        retriever_2 = create_retriever(small_retrieved_chunks, language)
-        retrieved_small_chunks = retriever_2.retrieve(modified_query_text, top1_check=True) # retrieve for higher than the top 1 score * 0.5
-        return_chunks = []
-        for index, chunk in enumerate(retrieved_small_chunks):
-            return_chunks.append(small_chunks[chunk['chunk_index']])
-
-        # 3. Generate Answer
-        print("[3] generate answer:")
-        answer = generate_sub_query_answer(sub_query, return_chunks, language)
-        if ("无法回答" not in answer and 'Unable to answer' not in answer):
-            #4. Fine-tune retriever
-            retrieve_answer = get_remove_names_from_text(answer, doc_names)
-            final_retrieve = retrieve_answer
-            print("[4] rerieve for final answer: {}".format(final_retrieve))
-            retrieved_small_chunks = retriever_2.retrieve(final_retrieve, top1_check=True) # retrieve for higher than the top 1 score * 0.5
+            retriever_2 = create_retriever(small_retrieved_chunks, language)
+            retrieved_small_chunks = retriever_2.retrieve(query_text_for_small_retriever, top1_check=True) # retrieve for higher than the top 1 score * 0.5
             return_chunks = []
             for index, chunk in enumerate(retrieved_small_chunks):
                 return_chunks.append(small_chunks[chunk['chunk_index']])
-            print('final chunks: ', len(return_chunks))
+        else:
+            # # 2. Retrieve smaller chunks(use BM25)
+            print("[2] retrieve with smaller chunks and extract document name:")
+            small_retrieved_chunks, small_chunks = create_smaller_chunks_without_names(language, retrieved_chunks, doc_names)
+            retriever_2 = create_retriever(small_retrieved_chunks, language)
+            retrieved_small_chunks = retriever_2.retrieve(modified_query_text, top1_check=True) # retrieve for higher than the top 1 score * 0.5
+            return_chunks = []
+            for index, chunk in enumerate(retrieved_small_chunks):
+                return_chunks.append(small_chunks[chunk['chunk_index']])
+
+            # 3. Generate Answer
+            print("[3] generate answer:")
+            answer = generate_sub_query_answer(sub_query, return_chunks, language)
+            if ("无法回答" not in answer and 'Unable to answer' not in answer):
+                #4. Fine-tune retriever
+                retrieve_answer = get_remove_names_from_text(answer, doc_names)
+                final_retrieve = retrieve_answer
+                print("[4] rerieve for final answer: {}".format(final_retrieve))
+                retrieved_small_chunks = retriever_2.retrieve(final_retrieve, top1_check=True) # retrieve for higher than the top 1 score * 0.5
+                return_chunks = []
+                for index, chunk in enumerate(retrieved_small_chunks):
+                    return_chunks.append(small_chunks[chunk['chunk_index']])
+                print('final chunks: ', len(return_chunks))
 
         combined_chunks.extend(return_chunks)
         combined_answers.append(answer)
@@ -213,7 +232,7 @@ def breakdown_path(query_text, language="en", prediction=None, doc_ids=[], doc_n
         answer = generate_combined_questions_answer(query_text, queries, combined_answers, combined_chunks, language)
     
     # Test for without fine-tune retrieve
-    # return answer, combined_chunks
+    return answer, combined_chunks
 
     if ("无法回答" in answer or 'Unable to answer' in answer):
         return answer, combined_chunks
