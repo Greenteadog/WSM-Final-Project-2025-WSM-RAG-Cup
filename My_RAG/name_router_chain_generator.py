@@ -97,7 +97,7 @@ Label: [SIMPLE or COMPLEX]
          "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
          "top_p": 0.9,
          "top_k": 40,
-         "max_tokens": 1024,
+         "num_predict": 256,
         #  "stream": True,
     }, prompt=prompt)
     print("query_classifier: ", response["response"])
@@ -180,7 +180,7 @@ Answer in Simplified Chinese.
     response = client.generate(model=ollama_config["model"], options={
         "num_ctx": 32768,
         "temperature": 0.1, 
-        "max_tokens": 1024,
+        "num_predict": 1024,
         "top_p": 0.9,
         "top_k": 40,
         "frequency_penalty": 0.1,
@@ -249,7 +249,7 @@ Context:
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
          "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
-         "max_tokens": 1024,
+         "num_predict": 256,
          "top_p": 0.9,
          "top_k": 40,
          "frequency_penalty": 0.5,
@@ -325,7 +325,7 @@ You are a concise synthesis assistant. Your goal is to construct a single, direc
     response = client.generate(model=ollama_config["model"], options={
         "num_ctx": 8192,
          "temperature": 0.3, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
-         "max_tokens": 1024,
+         "num_predict": 1024,
          "stop": ["\n\n"],
     }, prompt=prompt)
 
@@ -402,7 +402,7 @@ You are a precise data comparison assistant.
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
          "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
-         "max_tokens": 1024,
+         "num_predict": 1024,
          "stop": ["\n\n"],
     }, prompt=prompt)
 
@@ -507,7 +507,7 @@ Your task is to convert these into a single, grammatically correct, and strictly
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
          "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
-         "max_tokens": 1024,
+         "num_predict": 1024,
          "stop": ["\n\n"],
     }, prompt=prompt)
 
@@ -573,7 +573,7 @@ You are a helpful Q&A assistant. Answer the user's question using ONLY the provi
     response = client.generate(model=ollama_config["model"], options={
         "num_ctx": 32768,
         "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
-        "max_tokens": 1024,
+        "num_predict": 128,
         "stop": ["\n\n"],
     }, prompt=prompt)
 
@@ -621,7 +621,7 @@ Label: [SIMPLE or COMPLEX]
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
          "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
-         "max_tokens": 1024,
+         "num_predict": 256,
          "top_p": 0.9,
          "top_k": 40,
          "frequency_penalty": 0.5,
@@ -695,7 +695,7 @@ Context:
     client = Client(host=ollama_config["host"])
     response = client.generate(model=ollama_config["model"], options={
          "temperature": 0.1, # [0.0, 1.0], 0.0 is more deterministic, 1.0 is more random and creative
-         "max_tokens": 1024,
+         "num_predict": 64,
          "top_p": 0.9,
          "top_k": 40,
          "frequency_penalty": 0.5,
