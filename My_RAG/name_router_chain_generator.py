@@ -596,6 +596,7 @@ Please answer with in one concise answer. Do not repeat the question or the cont
 2. Scan the Reference Data to find the exact match.
 3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information within the reference data.
 4. If the answer is found, write it down, and add the character "。" at the end of the answer.
+5. Answer in Simplified Chinese.
 
 **If the answer cannot be found in the provided text, strictly output: "无法回答"** no need to explain, no need to add "。" at the end of the answer.
 
@@ -605,7 +606,7 @@ Question:
 Context:
 {context} 
 
-### Answer
+### Answer (Use Simplified Chinese)
     """
     context = "\n".join([chunk['page_content'] for chunk in context])
     prompt = prompt.format(query=query, context=context)
