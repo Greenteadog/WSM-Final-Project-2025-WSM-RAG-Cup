@@ -152,33 +152,38 @@ class DenseRetriever:
         self.client = Client(host=ollama_config["host"])
         
         if use_faiss:
-            # Load pre-computed FAISS index
-            import faiss
-            import json
-            from pathlib import Path
-            
-            faiss_dir = Path(__file__).parent.parent / "db" / "faiss" / "chunks" / language
-            index_path = faiss_dir / f"{language}.index"
-            mapping_path = faiss_dir / f"{language}_mapping.json"
-            
-            if not index_path.exists():
-                raise FileNotFoundError(f"FAISS index not found: {index_path}")
-            
-            print(f"[DenseRetriever] Loading FAISS index from {index_path}...")
-            self.faiss_index = faiss.read_index(str(index_path))
-            
-            # Load mapping (FAISS ID -> Chunk ID)
-            with open(mapping_path, 'r') as f:
-                self.faiss_to_chunk_id = json.load(f)
-                # Convert string keys to int
-                self.faiss_to_chunk_id = {int(k): v for k, v in self.faiss_to_chunk_id.items()}
-            
-            # Create chunk_id to index mapping
-            self.chunk_id_to_idx = {chunk['id'] if 'id' in chunk else i: i 
-                                   for i, chunk in enumerate(chunks)}
-            
-            print(f"[DenseRetriever] Loaded FAISS index with {self.faiss_index.ntotal} vectors")
-        else:
+            try:
+                # Load pre-computed FAISS index
+                import faiss
+                import json
+                from pathlib import Path
+                
+                faiss_dir = Path(__file__).parent.parent / "db" / "faiss" / "chunks" / language
+                index_path = faiss_dir / f"{language}.index"
+                mapping_path = faiss_dir / f"{language}_mapping.json"
+                
+                if not index_path.exists():
+                    raise FileNotFoundError(f"FAISS index not found: {index_path}")
+                
+                print(f"[DenseRetriever] Loading FAISS index from {index_path}...")
+                self.faiss_index = faiss.read_index(str(index_path))
+                
+                # Load mapping (FAISS ID -> Chunk ID)
+                with open(mapping_path, 'r') as f:
+                    self.faiss_to_chunk_id = json.load(f)
+                    # Convert string keys to int
+                    self.faiss_to_chunk_id = {int(k): v for k, v in self.faiss_to_chunk_id.items()}
+                
+                # Create chunk_id to index mapping
+                self.chunk_id_to_idx = {chunk['id'] if 'id' in chunk else i: i 
+                                       for i, chunk in enumerate(chunks)}
+                
+                print(f"[DenseRetriever] Loaded FAISS index with {self.faiss_index.ntotal} vectors")
+            except Exception as e:
+                print(f"[DenseRetriever] FAISS load failed: {e}. Falling back to on-the-fly embeddings.")
+                self.use_faiss = False
+        
+        if not self.use_faiss:
             # Generate embeddings on-the-fly (slow!)
             print(f"[DenseRetriever] Generating embeddings for {len(self.corpus)} chunks using {embedding_model}...")
             self.chunk_embeddings = []

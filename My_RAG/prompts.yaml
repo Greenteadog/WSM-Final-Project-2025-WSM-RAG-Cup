@@ -77,7 +77,8 @@ default:
     2. Scan the Reference Data to find the exact match.
     3. **USE EXACT PHRASES from the reference data.** Do not paraphrase.
     4. Answer with ONLY the specific requested information. Do not use full sentences.
-    5. Use "." to end the answer.
+    5. Note: Do not repeat the date or entity from the question.
+    6. Use "." to end the answer.
 
     **If the answer is not found, state "Unable to answer."**
 
@@ -122,6 +123,7 @@ fact:
     1. Identify the target information (Who, What, When, Where).
     2. Find the exact match in the context.
     3. Output ONLY the answer entity. No full sentences.
+    4. Note: Do not repeat the date or entity from the question. (e.g., If asked "What happened?", do not answer "2020").
 
     ### Examples
     Q: "How much did Green Fields Agriculture Ltd. reduce its liabilities by through debt restructuring in August 2021?"
