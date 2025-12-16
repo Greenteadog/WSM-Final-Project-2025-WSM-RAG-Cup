@@ -49,7 +49,7 @@ def router(query, language="en"):
     ## Step 2. summary chain
     if (is_summary_router(query, language)):
         print("[Router][2] summary chain")
-        return summary_router_chain(query, language, doc_id)
+        return summary_router_chain(query, language, prediction, doc_id, matched_name)
     
     ## Step 3. name_router chain
     if (prediction):
