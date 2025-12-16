@@ -221,7 +221,7 @@ comparison:
 summary:
   en: |
     ### Instruction
-    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
+    You are a summary assistant. Your goal is to extract specific entities, dates, numbers, or names.
 
     ### Steps
     1. Analyze the Question to understand what specific information is needed.
@@ -248,7 +248,7 @@ summary:
 
   zh: |
     ### Instruction
-    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
+    You are a summary assistant. Your goal is to extract specific entities, dates, numbers, or names.
 
     ### Steps
     1. Analyze the Question to understand what specific information is needed.
@@ -324,3 +324,69 @@ reasoning:
     </data>
 
     ### Answer
+
+new_summary:
+  en: |
+    ### Role
+    You are an expert report analyst. Your task is to extract key information based on the user's query and generate a logical summary.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow the following thought chain:
+
+    1.  **Question**: Read the Question and extract the key information.
+    2.  **Scan**: Read the text and extract the key information.
+    3.  **Scan & Select**: Select the relevant information based on the question, write the selected information in a list.
+    4.  **Compose**: Connect the selected information into a paragraph, only use the selected information.
+
+    ### Constraints(must follow)
+    - **Do not use any information outside of the provided reference data.**
+
+    ### Output Format (JSON)
+    {{
+        "selected_information": ["selected information"],
+        "answer": "Here fill in the final natural language summary..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+  
+  zh: |
+    ### Role
+    You are an expert report analyst. Your task is to extract key information based on the user's query and generate a logical summary.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow the following thought chain:
+
+    1.  **Question**: Read the Question and extract the key information.
+    2.  **Scan**: Read the text and extract the key information.
+    3.  **Scan & Select**: Select the relevant information based on the question, write the selected information in a list.
+    4.  **Compose**: Connect the selected information into a paragraph, only use the selected information.
+
+    ### Constraints(must follow)
+    - **Do not use any information outside of the provided reference data.**
+    - **Answer MUST end with "。".**
+    - **Answer MUST be in Simplified Chinese.**
+
+
+    ### Output Format (JSON)
+    {{
+        "selected_information": ["selected information"],
+        "answer": "Here fill in the final natural language summary in Simplified Chinese..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
