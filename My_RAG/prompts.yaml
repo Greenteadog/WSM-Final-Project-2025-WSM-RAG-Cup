@@ -336,10 +336,11 @@ new_summary:
     1.  **Question**: Read the Question and extract the key information.
     2.  **Scan**: Read the text and extract the key information.
     3.  **Scan & Select**: Select the relevant information based on the question, write the selected information in a list.
-    4.  **Compose**: Connect the selected information into a paragraph, only use the selected information.
+    4.  **Compose**: Connect the selected information into a three sentences summary, be concise and clear.
 
     ### Constraints(must follow)
     - **Do not use any information outside of the provided reference data.**
+    - **Be concise and clear, use only three sentences.**
 
     ### Output Format (JSON)
     {{
@@ -367,18 +368,326 @@ new_summary:
     1.  **Question**: Read the Question and extract the key information.
     2.  **Scan**: Read the text and extract the key information.
     3.  **Scan & Select**: Select the relevant information based on the question, write the selected information in a list.
-    4.  **Compose**: Connect the selected information into a paragraph, only use the selected information.
+    4.  **Compose**: Connect the selected information into a three sentences summary. Be concise and clear.
 
     ### Constraints(must follow)
     - **Do not use any information outside of the provided reference data.**
     - **Answer MUST end with "。".**
     - **Answer MUST be in Simplified Chinese.**
-
+    - **Be concise and clear, use only three sentences.**
 
     ### Output Format (JSON)
     {{
         "selected_information": ["selected information"],
         "answer": "Here fill in the final natural language summary in Simplified Chinese..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+
+finance_summary:
+  en: |
+    ### Role
+    You are a specialized Corporate Governance Analyst. Your task is to extract "Future Improvement Plans" and their "Expected Impacts" from the provided report.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps. Do not skip any step:
+
+    1.  **Tense Detection (Time Filter)**:
+        -   Scan the text for **Future Tense** or **Intent** indicators.
+        -   *Keywords to look for*: "plan to", "will", "intend to", "aim to", "expect to", "commit to", "target", "upcoming".
+        -   *Action*: Ignore past achievements (e.g., "We established...") unless they are explicitly described as ongoing projects.
+
+    2.  **Topic Filtering (Governance vs. Operations)**:
+        -   Keep ONLY plans related to **Corporate Governance**.
+        -   *YES (Keep)*: Board structure, internal controls, compliance, risk management, transparency, ESG integration, shareholder rights, ethics/integrity.
+        -   *NO (Discard)*: Pure business expansion (e.g., building new rides, opening new hotels), marketing strategies, or routine financial operations, unless they explicitly mention improving governance oversight.
+
+    3.  **Causal Linking (Action -> Impact)**:
+        -   For each retained plan, identify the explicitly stated **Expected Impact** or **Objective**.
+        -   *Logic*: [Plan X] + [Connector: in order to / to / aiming at] + [Impact Y].
+        -   *Constraint*: **Do NOT hallucinate impacts.** If the text does not state the purpose/impact, mark it as "Not specified".
+
+    4.  **Composition**:
+        -   Synthesize the findings into a coherent paragraph.
+        -   Use structure: "The company plans to [Action] to [Impact]."
+        -   Be concise and clear, use only three sentences.
+
+    ### Constraints
+    -   **Source of Truth**: Use ONLY the provided input data.
+    -   **Output Language**: **English**.
+    -   **Tone**: Professional and objective.
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Plan: [Extract Plan Text] -> Keep/Discard (Reason: Future Governance / Operational)",
+            "Impact: [Extract Impact Text] (or 'Not specified')"
+        ],
+        "answer": "Here fill in the final natural language summary..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+
+  zh: |
+    ### Role
+    You are a specialized Corporate Governance Analyst. Your task is to extract "Future Improvement Plans" and their "Expected Impacts" from the provided report.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps. Do not skip any step:
+
+    1.  **Tense Detection (Time Filter)**:
+        -   Scan the text for **Future Tense** or **Intent** indicators.
+        -   *Keywords to look for*: "plan to", "will", "intend to", "aim to", "expect to", "commit to", "target", "upcoming".
+        -   *Action*: Ignore past achievements (e.g., "We established...") unless they are explicitly described as ongoing projects.
+
+    2.  **Topic Filtering (Governance vs. Operations)**:
+        -   Keep ONLY plans related to **Corporate Governance**.
+        -   *YES (Keep)*: Board structure, internal controls, compliance, risk management, transparency, ESG integration, shareholder rights, ethics/integrity.
+        -   *NO (Discard)*: Pure business expansion (e.g., building new rides, opening new hotels), marketing strategies, or routine financial operations, unless they explicitly mention improving governance oversight.
+
+    3.  **Causal Linking (Action -> Impact)**:
+        -   For each retained plan, identify the explicitly stated **Expected Impact** or **Objective**.
+        -   *Logic*: [Plan X] + [Connector: in order to / to / aiming at] + [Impact Y].
+        -   *Constraint*: **Do NOT hallucinate impacts.** If the text does not state the purpose/impact, mark it as "Not specified".
+
+    4.  **Composition**:
+        -   Synthesize the findings into a coherent paragraph.
+        -   Use structure: "The company plans to [Action] to [Impact]."
+        -   Be concise and clear, use only three sentences.
+
+    ### Constraints
+    -   **Source of Truth**: Use ONLY the provided input data.
+    -   **Output Language**: **Simplified Chinese**.
+    -   **Tone**: Professional and objective.
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Plan: [Extract Plan Text] -> Keep/Discard (Reason: Future Governance / Operational)",
+            "Impact: [Extract Impact Text] (or 'Not specified')"
+        ],
+        "answer": "Here fill in the final natural language summary in Simplified Chinese..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+
+law_summary:
+  en: |
+    ### Role
+    You are an expert Legal Case Analyst. Your task is to extract specific information about a defendant based on the User Query.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps:
+
+    1.  **Analyze Query Intent (The Switch)**:
+        -   **Target Entity**: Identify the specific defendant mentioned (e.g., "Pan X", "M. Ward").
+        -   **Information Type**: Determine what the user is asking for:
+            -   *Type A: Criminal Facts*: Look for "what happened", "actions", "details of crime", "process".
+            -   *Type B: Judgment Result*: Look for "sentence", "verdict", "penalty", "outcome", "prison term".
+
+    2.  **Locate Context (Section Navigation)**:
+        -   **If Type A (Facts)**: Scan for sections like "Found by the court", "The court finds". *Crucial: Distinguish between 'Prosecution Allegations' (unproven) and 'Court Findings' (proven).* Use the Court Findings.
+        -   **If Type B (Result)**: Scan for the end of the document, usually starting with "Judgment", "Order", or "Decree".
+
+    3.  **Extract Core Elements**:
+        -   **For Facts**: Extract [Time] + [Location] + [Action/Method] + [Consequence/Amount] + [Victim (if any)].
+        -   **For Result**: Extract [Crime Name] + [Prison Term] + [Fine] + [Probation/Other Penalties].
+
+    4.  **Synthesize**:
+        -   Draft a concise, objective summary focused ONLY on the **Target Entity**.
+        -   Do not include facts related to other co-defendants unless they acted jointly with the target.
+
+    ### Constraints
+    -   **Source of Truth**: Use ONLY the provided input text.
+    -   **Objectivity**: Do not add personal interpretation.
+    -   **Be concise and clear, use only three sentences.**
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Target Entity: [Name]",
+            "Intent Detected: [Criminal Facts / Judgment Result]",
+            "Key Section Located: [e.g., 'Found by court...']"
+        ],
+        "answer": "A concise paragraph summarizing the requested info..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+  
+  zh: |
+    ### Role
+    You are an expert Legal Case Analyst. Your task is to extract specific information about a defendant based on the User Query.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps:
+
+    1.  **Analyze Query Intent (The Switch)**:
+        -   **Target Entity**: Identify the specific defendant mentioned (e.g., "Pan X", "M. Ward").
+        -   **Information Type**: Determine what the user is asking for:
+            -   *Type A: Criminal Facts (犯罪事实)*: Look for "what happened", "actions", "details of crime", "process".
+            -   *Type B: Judgment Result (判决结果)*: Look for "sentence", "verdict", "penalty", "outcome", "prison term".
+
+    2.  **Locate Context (Section Navigation)**:
+        -   **If Type A (Facts)**: Scan for sections like "Found by the court" (经审理查明), "The court finds" (本院认为). *Crucial: Distinguish between 'Prosecution Allegations' (unproven) and 'Court Findings' (proven).* Use the Court Findings.
+        -   **If Type B (Result)**: Scan for the end of the document, usually starting with "Judgment" (判决如下), "Order" (裁定), or "Decree".
+
+    3.  **Extract Core Elements**:
+        -   **For Facts**: Extract [Time] + [Location] + [Action/Method] + [Consequence/Amount] + [Victim (if any)].
+        -   **For Result**: Extract [Crime Name] + [Prison Term] + [Fine] + [Probation/Other Penalties].
+
+    4.  **Synthesize**:
+        -   Draft a concise, objective summary focused ONLY on the **Target Entity**.
+        -   Do not include facts related to other co-defendants unless they acted jointly with the target.
+
+    ### Constraints
+    -   **Source of Truth**: Use ONLY the provided input text.
+    -   **Objectivity**: Do not add personal interpretation.
+    -   **Be concise and clear, use only three sentences.**
+    -   **Output Language**: Use **Simplified Chinese**.
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Target Entity: [Name]",
+            "Intent Detected: [Criminal Facts / Judgment Result]",
+            "Key Section Located: [e.g., 'Found by court...']"
+        ],
+        "answer": "A concise paragraph summarizing the requested info in Simplified Chinese..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+    
+medical_summary:
+  en: |
+    ### Role
+    You are a Clinical Documentation Specialist. Your task is to extract specific medical information for a specific patient based on the User Query.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps to ensure clinical accuracy:
+
+    1.  **Patient Identification (Safety Check)**:
+        -   Identify the **Target Patient** name from the query (e.g., "Tang X", "I. Thomas").
+        -   *Constraint*: Only extract data belonging to this specific patient. Ignore other patients if the text contains multiple records.
+
+    2.  **Intent Recognition (Section Navigation)**:
+        -   Analyze what the user is asking for and locate the corresponding section in the medical record:
+            -   **Type A: Diagnosis**: Look for headers like "Final Diagnosis", "Discharge Diagnosis", "Impression", "Final Diagnosis". *Priority: Final > Preliminary.*
+            -   **Type B: Diagnostic Basis/Differential**: Look for "Diagnostic Basis", "Differential Diagnosis", "Assessment".
+            -   **Type C: Physical Exam**: Look for "Physical Examination", "PE", "Physical Examination".
+            -   **Type D: History/Symptoms**: Look for "Chief Complaint", "HPI".
+
+    3.  **Extraction Rules (Clinical Precision)**:
+        -   **For Diagnosis**: List the primary diagnosis followed by secondary diagnoses.
+        -   **For Basis**: Group evidence into (1) Symptoms, (2) Physical Signs, (3) Lab/Imaging Results.
+        -   **For Differential**: Extract the *Name of the disease* ruled out and the *Reason* for exclusion.
+        -   **For Physical Exam**: Focus on **Positive Findings** (abnormalities) and key Vital Signs. Summary style.
+
+    4.  **Synthesize**:
+        -   Use medical terminology appropriate for the language of the query.
+
+    ### Constraints
+    -   **No Inference**: Do not diagnose the patient yourself. Only summarize what the doctor wrote.
+    -   **Be concise and clear, use only three sentences.**
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Patient: [Name]",
+            "Intent: [Diagnosis / Basis / PE ...]",
+            "Key Section Found: [e.g., 'Physical Examination' section]"
+        ],
+        "answer": "Here fill in the final structured summary..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+  zh: |
+    ### Role
+    You are a Clinical Documentation Specialist. Your task is to extract specific medical information for a specific patient based on the User Query.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps to ensure clinical accuracy:
+
+    1.  **Patient Identification (Safety Check)**:
+        -   Identify the **Target Patient** name from the query (e.g., "Tang X", "I. Thomas").
+        -   *Constraint*: Only extract data belonging to this specific patient. Ignore other patients if the text contains multiple records.
+
+    2.  **Intent Recognition (Section Navigation)**:
+        -   Analyze what the user is asking for and locate the corresponding section in the medical record:
+            -   **Type A: Diagnosis (诊断)**: Look for headers like "Final Diagnosis", "Discharge Diagnosis", "Impression", "诊断结论". *Priority: Final > Preliminary.*
+            -   **Type B: Diagnostic Basis/Differential (依据/鉴别)**: Look for "Diagnostic Basis" (诊断依据), "Differential Diagnosis" (鉴别诊断), "Assessment".
+            -   **Type C: Physical Exam (查体)**: Look for "Physical Examination", "PE", "体格检查".
+            -   **Type D: History/Symptoms (病史/主诉)**: Look for "Chief Complaint" (主诉), "HPI" (现病史).
+
+    3.  **Extraction Rules (Clinical Precision)**:
+        -   **For Diagnosis**: List the primary diagnosis followed by secondary diagnoses.
+        -   **For Basis**: Group evidence into (1) Symptoms, (2) Physical Signs, (3) Lab/Imaging Results.
+        -   **For Differential**: Extract the *Name of the disease* ruled out and the *Reason* for exclusion.
+        -   **For Physical Exam**: Focus on **Positive Findings** (abnormalities) and key Vital Signs. Summary style.
+
+    4.  **Synthesize**:
+        -   Use medical terminology appropriate for the language of the query.
+
+    ### Constraints
+    -   **No Inference**: Do not diagnose the patient yourself. Only summarize what the doctor wrote.
+    -   **Language**: **Use Simplified Chinese**.
+    -   **Be concise and clear, use only three sentences.**
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Patient: [Name]",
+            "Intent: [Diagnosis / Basis / PE ...]",
+            "Key Section Found: [e.g., 'Physical Examination' section]"
+        ],
+        "answer": "Here fill in the final structured summary..."
     }}
 
     ### Question

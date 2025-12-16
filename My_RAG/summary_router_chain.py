@@ -56,10 +56,20 @@ def summary_router_chain(query, language, prediction, doc_ids, matched_name):
     contents = get_contents_from_db(target_doc_ids=doc_ids)
     context = [{"page_content": content} for content in contents]
     
-    raw_response = generate_answer(query_text, context, language, prompt_type="new_summary")
+    if (prediction == "Law"):
+        raw_response = generate_answer(query_text, context, language, prompt_type="law_summary")
+    elif (prediction == "Medical"):
+        raw_response = generate_answer(query_text, context, language, prompt_type="medical_summary")
+    elif (prediction == "Finance"):
+        raw_response = generate_answer(query_text, context, language, prompt_type="finance_summary")
+    else:
+        raw_response = generate_answer(query_text, context, language, prompt_type="new_summary")
+    
     print("raw_response: ", raw_response)
     try:
-        result_json = json.loads(raw_response)
+        # Clean up the response if it contains markdown code blocks
+        clean_response = raw_response.replace("```json", "").replace("```", "").strip()
+        result_json = json.loads(clean_response)
         answer = result_json.get("answer", '')
         if (not answer): 
             print("JSON Parse answer not found. Retry with fallback prompt")
