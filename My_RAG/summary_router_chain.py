@@ -43,10 +43,10 @@ def generate_answer(query, context_chunks, language="en", prompt_type="summary_c
         "num_ctx": 32768,
         "temperature": 0.0,
         "max_tokens": 256,
-        # "top_p": 0.9,
-        # "top_k": 40,
-        # "frequency_penalty": 0.1,
-        # "presence_penalty": 0.1,
+        "top_p": 0.9,
+        "top_k": 40,
+        "frequency_penalty": 0.1,
+        "presence_penalty": 0.1,
     }, prompt=prompt)
     
     return response["response"]
@@ -55,15 +55,18 @@ def summary_router_chain(query, language, prediction, doc_ids, matched_name):
     query_text = query['query']['content']
     contents = get_contents_from_db(target_doc_ids=doc_ids)
     context = [{"page_content": content} for content in contents]
-    
-    if (prediction == "Law"):
-        raw_response = generate_answer(query_text, context, language, prompt_type="law_summary")
-    elif (prediction == "Medical"):
-        raw_response = generate_answer(query_text, context, language, prompt_type="medical_summary")
-    elif (prediction == "Finance"):
-        raw_response = generate_answer(query_text, context, language, prompt_type="finance_summary")
-    else:
+
+    if (language == 'en'):
         raw_response = generate_answer(query_text, context, language, prompt_type="new_summary")
+    else:
+        if (prediction == "Law"):
+            raw_response = generate_answer(query_text, context, language, prompt_type="law_summary")
+        elif (prediction == "Medical"):
+            raw_response = generate_answer(query_text, context, language, prompt_type="medical_summary")
+        elif (prediction == "Finance"):
+            raw_response = generate_answer(query_text, context, language, prompt_type="finance_summary")
+        else:
+            raw_response = generate_answer(query_text, context, language, prompt_type="new_summary")
     
     print("raw_response: ", raw_response)
     try:
