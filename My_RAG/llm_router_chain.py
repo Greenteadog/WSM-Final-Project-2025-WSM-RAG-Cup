@@ -10,17 +10,39 @@ def llm_router_chain(query, language):
     # 0. Classify query
     query_type = classify_query(query_text, language)
 
-    # 1. Do the query expansion
-    #new_query = expand_query(query_text, language)
-    new_query = expand_query_2(query_text, language)  # Best performing - uses LLM reasoning
-    #new_query = expand_query_3(query_text, language)  # Uses FAISS dense retrieval (requires FAISS installed)
-    print("new_query: ", new_query)
-    # 2. Retrieve chunks
-    retrieved_chunks = retrieve_chunks(new_query, language)
-    #retrieved_chunks = retrieve_chunks_with_dense(new_query, language)
-    # 3. Generate answer
+    # 1. Hybrid Query Expansion
+    print("--- Hybrid Retrieval Strategy ---")
+    
+    # Strategy A: Reasoning Expansion (Precision)
+    # Uses Chain-of-Thought to understand intent
+    query_reasoning = expand_query_2(query_text, language)
+    print("Reasoning Query: ", query_reasoning)
+    
+    # Strategy B: Keyword Expansion (Recall)
+    # Uses traditional keyword extraction
+    query_keywords = expand_query(query_text, language)
+    print("Keyword Query: ", query_keywords)
+    
+    # 2. Retrieve chunks for both strategies
+    chunks_reasoning = retrieve_chunks(query_reasoning, language)
+    chunks_keywords = retrieve_chunks(query_keywords, language)
+    
+    # 3. Merge and Deduplicate
+    # We use a dictionary keyed by chunk 'id' to remove duplicates
+    # We prioritize Reasoning chunks, then fill with Keywords chunks
+    merged_chunks_map = {c['id']: c for c in chunks_reasoning}
+    
+    for c in chunks_keywords:
+        if c['id'] not in merged_chunks_map:
+            merged_chunks_map[c['id']] = c
+            
+    retrieved_chunks = list(merged_chunks_map.values())
+    print(f"Merged Chunks: {len(chunks_reasoning)} (Reasoning) + {len(chunks_keywords)} (Keywords) -> {len(retrieved_chunks)} Unique")
+
+    # 4. Generate answer
     answer = generate_answer_llm(query_text, retrieved_chunks, language, query_type)
-    # 4. Return answer and chunks
+    
+    # 5. Return answer and chunks
     return answer, retrieved_chunks
 
 def expand_query(query, language="en", size=3):

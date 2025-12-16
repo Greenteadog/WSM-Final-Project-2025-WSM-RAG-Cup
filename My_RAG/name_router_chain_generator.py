@@ -526,7 +526,8 @@ You are a helpful Q&A assistant. Answer the user's question using **ONLY** the p
 1. Analyze the Question to understand what specific information is needed.
 2. Scan the Reference Data to find the exact match.
 3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information with the SAME format as the reference data. Do not use full sentences. Do not repeat the question or the context.
-4. Use "." to end the answer.
+4. **Note: Do not repeat the date or entity from the question. (e.g., If asked "What happened?", do not answer "2020" if 2020 is in the question).**
+5. Use "." to end the answer.
 
 **If the answer is not founded or you don't know the answer, state "Unable to answer." no need to explain.**
 **Do NOT hallucinate or make up information not present in the data.**
@@ -653,9 +654,10 @@ Please answer with in one concise answer. Do not repeat the question or the cont
 1. Analyze the Question to understand what specific information is needed.
 2. Scan the Reference Data to find the exact match.
 3. If the answer is single and involves specific information (e.g., name, date, amount, location, project, event), answer with ONLY the specific requested information within the reference data.
-4. If the answer is found, write it down.
-5. **Fallback:** If the answer cannot be found in the provided text, strictly output: "Unable to answer."
-6. **Answer MUST end with a period.**
+4. **Note: Do not repeat the date or entity from the question. (e.g., If asked "What happened?", do not answer "2020" if 2020 is in the question).**
+5. If the answer is found, write it down.
+6. **Fallback:** If the answer cannot be found in the provided text, strictly output: "Unable to answer."
+7. **Answer MUST end with a period.**
 
 Question:
 {query} 
