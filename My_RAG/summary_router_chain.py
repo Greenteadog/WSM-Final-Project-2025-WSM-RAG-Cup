@@ -47,7 +47,10 @@ def generate_answer(query, context_chunks, language="en", prompt_type="summary_c
         "top_k": 40,
         "frequency_penalty": 0.1,
         "presence_penalty": 0.1,
+        "stream": True,
     }, prompt=prompt)
+
+    print("response: ", response)
     
     return response["response"]
 
