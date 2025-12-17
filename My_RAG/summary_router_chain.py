@@ -42,7 +42,7 @@ def generate_answer(query, context_chunks, language="en", prompt_type="summary_c
     
     response = client.generate(model=ollama_config["model"], options={
         "num_ctx": 32768,
-        "temperature": 0.0,
+        "temperature": 0.3,
         # "max_tokens": 256,
         "stop": ["\n\n"],
         # "top_p": 0.9,
@@ -65,20 +65,22 @@ def summary_router_chain(query, language, prediction, doc_ids, matched_name):
     row_chunks = get_chunks_from_db(prediction, doc_ids, language)
     retriever = create_retriever(row_chunks, language)
     big_chunks = retriever.retrieve(modified_query_text, threshold=0) # retrieve as much as possible
-    if not big_chunks:
-        raw_response = generate_answer(query_text, contents, language, prompt_type="new_summary")
+    if(big_chunks):
+        raw_response = generate_answer(query_text, big_chunks, language, prompt_type="new_summary")
     else:
-        if (language == 'en'):
-            raw_response = generate_answer(query_text, big_chunks, language, prompt_type="new_summary")
-        else:
-            if (prediction == "Law"):
-                raw_response = generate_answer(query_text, big_chunks, language, prompt_type="law_summary")
-            elif (prediction == "Medical"):
-                raw_response = generate_answer(query_text, contents, language, prompt_type="medical_summary")
-            elif (prediction == "Finance"):
-                raw_response = generate_answer(query_text, big_chunks, language, prompt_type="finance_summary")
-            else:
-                raw_response = generate_answer(query_text, big_chunks, language, prompt_type="new_summary")
+        raw_response = generate_answer(query_text, contents, language, prompt_type="new_summary")
+    # else:
+    #     if (language == 'en'):
+    #         raw_response = generate_answer(query_text, big_chunks, language, prompt_type="new_summary")
+    #     else:
+    #         if (prediction == "Law"):
+    #             raw_response = generate_answer(query_text, big_chunks, language, prompt_type="law_summary")
+    #         elif (prediction == "Medical"):
+    #             raw_response = generate_answer(query_text, contents, language, prompt_type="medical_summary")
+    #         elif (prediction == "Finance"):
+    #             raw_response = generate_answer(query_text, big_chunks, language, prompt_type="finance_summary")
+    #         else:
+    #             raw_response = generate_answer(query_text, big_chunks, language, prompt_type="new_summary")
     
     print("raw_response: ", raw_response)
     try:
@@ -88,10 +90,10 @@ def summary_router_chain(query, language, prediction, doc_ids, matched_name):
         answer = result_json.get("answer", '')
         if (not answer): 
             print("JSON Parse answer not found. Retry with fallback prompt")
-            answer = generate_answer(query_text, big_chunks, language, prompt_type="summary")
+            answer = generate_answer(query_text, contents, language, prompt_type="summary")
     except json.JSONDecodeError:
         print("JSON Parse Error. Retry with fallback prompt")
-        answer = generate_answer(query_text, big_chunks, language, prompt_type="summary")
+        answer = generate_answer(query_text, contents, language, prompt_type="summary")
 
     # row_chunks = get_chunks_from_db(prediction, doc_ids, language)
     # retriever = create_retriever(row_chunks, language)

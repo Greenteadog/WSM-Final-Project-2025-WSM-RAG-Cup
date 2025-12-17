@@ -327,36 +327,31 @@ reasoning:
 
 new_summary:
   en: |
-    ### Role
-    You are an expert report analyst. Your task is to extract key information based on the user's query and generate a logical summary.
+    ### Instruction
+    You are a summary assistant. Your goal is to extract specific entities, dates, numbers, or names.
 
-    ### Thinking Process (Chain of Thought)
-    You must strictly follow the following thought chain:
+    ### Steps
+    1. Analyze the Question to understand what specific information is needed.
+    2. Scan the document, find the relevant information and answer the question.
+    3. If multiple points are retrieved, synthesize them into a coherent paragraph.
 
-    1.  **Question**: Read the Question and extract the key information.
-    2.  **Scan**: Read the text and extract the key information.
-    3.  **Scan & Select**: Select the relevant information based on the question, write the selected information in a list.
-    4.  **Compose**: Connect the selected information into a three sentences summary, be concise and clear.
+    **If the answer is not founded or you don't know the answer, state "Unable to answer." no need to explain.**
+    **Ensure the answer's completeness.**
+    **Answer MUST end with a period.**
 
-    ### Constraints(must follow)
-    - **Do not use any information outside of the provided reference data.**
-    - **Be concise and clear, use only three sentences.**
-
-    ### Output Format (JSON)
-    {{
-        "selected_information": ["selected information"],
-        "answer": "Here fill in the final natural language summary..."
-    }}
+    ### Examples
+    Q: "Summarize the risk management and internal control measures implemented by Stellar Entertainment Holdings Ltd. as outlined in the governance structure."
+    A: "Stellar Entertainment Holdings Ltd. has implemented comprehensive risk management and internal control measures. The company updated its risk management framework in August 2017, identifying new risks and implementing mitigation strategies to improve its ability to respond to internal and external risks, ensuring continuous operation and stable development. Additionally, the company has a robust internal control system in place, with regular assessments to ensure its effectiveness in safeguarding assets and mitigating operational risks. These measures collectively enhance the company's resilience and operational stability."
 
     ### Question
     {query}
 
-    ### Input Data
+    ### Reference Data
     <data>
     {context}
     </data>
 
-    ### Output
+    ### Answer
   
   zh: |
     ### Role
