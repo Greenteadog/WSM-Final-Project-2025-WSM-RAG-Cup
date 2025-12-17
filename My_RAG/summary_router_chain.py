@@ -61,14 +61,14 @@ def summary_router_chain(query, language, prediction, doc_ids, matched_name):
     contents = get_contents_from_db(target_doc_ids=doc_ids)
     # entities = extract_entities(query_text, language)
     modified_query_text = get_remove_names_from_text(query_text, matched_name)
-    # context = [{"page_content": content} for content in contents]
+    document_chunks = [{"page_content": content} for content in contents]
     row_chunks = get_chunks_from_db(prediction, doc_ids, language)
     retriever = create_retriever(row_chunks, language)
     big_chunks = retriever.retrieve(modified_query_text, threshold=0) # retrieve as much as possible
     if(big_chunks):
         raw_response = generate_answer(query_text, big_chunks, language, prompt_type="new_summary")
     else:
-        raw_response = generate_answer(query_text, contents, language, prompt_type="new_summary")
+        raw_response = generate_answer(query_text, document_chunks, language, prompt_type="new_summary")
     # else:
     #     if (language == 'en'):
     #         raw_response = generate_answer(query_text, big_chunks, language, prompt_type="new_summary")
@@ -90,10 +90,10 @@ def summary_router_chain(query, language, prediction, doc_ids, matched_name):
         answer = result_json.get("answer", '')
         if (not answer): 
             print("JSON Parse answer not found. Retry with fallback prompt")
-            answer = generate_answer(query_text, contents, language, prompt_type="summary")
+            answer = generate_answer(query_text, document_chunks, language, prompt_type="summary")
     except json.JSONDecodeError:
         print("JSON Parse Error. Retry with fallback prompt")
-        answer = generate_answer(query_text, contents, language, prompt_type="summary")
+        answer = generate_answer(query_text, document_chunks, language, prompt_type="summary")
 
     # row_chunks = get_chunks_from_db(prediction, doc_ids, language)
     # retriever = create_retriever(row_chunks, language)
@@ -130,7 +130,6 @@ def extract_entities(query_text, language="en"):
     {query}
 
     ### Output
-    ###Output###
     """
     ollama_config = load_ollama_config()
     client = Client(host=ollama_config["host"])
