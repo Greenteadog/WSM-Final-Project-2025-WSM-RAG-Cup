@@ -127,14 +127,17 @@ Only output the answer, do not include any additional text.
 {query}
 
 ### Output Style Rules (CRITICAL)
-1. **Source Citation:** Start every claim with "According to the ...".
+1. **Source Citation:** Start every claim with "According to the ...", state out the subject of the claim.
 2. **Handling Conflicts:** - If two different courts provide different facts for the same person, use a contrast structure.
 3. **Handling Counts & Frequencies:**
    - You must state the total number AND list the specific timestamps/dates.
 
 ### Examples of Desired Output
-**User Query:** "How much did V. Martin embezzle?"
-**Output:** "According to the judgment of Bayside, Roseville, Court, the total amount embezzled by V. Martin is $700,000. However, according to the ruling in Vandalia, Bayside Court, no money was embezzled by V. Martin."
+**User Query:** "How much did <name> embezzle?"
+**Output:** "According to the judgment of <court>, the total amount embezzled by <name> is <sentences from the context>"
+
+**User Query:** "How did <subject> in <date> help in protecting <company_name> and its shareholders?"
+**Output:** "The <subject> in <date> ensured that <company_name> adhered to the latest regulations affecting corporate governance practices. <sentences from the context>"
 
 ### Final Answer
 """
