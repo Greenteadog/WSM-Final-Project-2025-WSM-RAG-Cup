@@ -1,0 +1,696 @@
+classification:
+  en: |
+    ### Instruction
+    You are a query classifier. Your task is to analyze the user's question and categorize it into one of the following types:
+    
+    1. **comparison**: The user is asking to compare two or more entities, items, or events (e.g., "Which is earlier?", "Compare A and B", "Who spent more?").
+    2. **summary**: The user is asking for a summary, overview, or main points of a document or topic (e.g., "Summarize the report", "What are the key measures?").
+    3. **fact**: The user is asking for a specific fact, entity, date, number, or name (e.g., "When did X happen?", "Who is the CEO?", "What is the subsidiary created in 2020?").
+    4. **reasoning**: The user is asking for an explanation, cause-and-effect relationship, or impact analysis involving multiple factors. (e.g., "How did X contribute to Y?", "Why did the profit increase?", "What was the impact of the new policy?").
+    5. **general**: If it doesn't fit the above (e.g., greetings, vague questions).
+
+    ### Output Format
+    Return ONLY the category name in lowercase. Do not add punctuation.
+
+    ### Examples
+    Q: "Compare the revenue of Company A and Company B."
+    A: comparison
+
+    Q: "Summarize the environmental report."
+    A: summary
+
+    Q: "Who was appointed as director in 2020?"
+    A: fact
+
+    Q: "How did the new CEO affect the stock price?"
+    A: reasoning
+
+    Q: "What happened in March 2019?"
+    A: fact
+
+    ### Question
+    {query}
+
+    ### Category
+  
+  zh: |
+    ### Instruction
+    你是一個問題分類器。你的任務是分析使用者的問題並將其歸類為以下類型之一：
+
+    1. **comparison** (比較): 使用者要求比較兩個或多個實體、項目或事件（例如：“哪個更早？”，“比較A和B”，“誰花費更多？”）。
+    2. **summary** (摘要): 使用者要求對文檔或主題進行摘要、概述或重點說明（例如：“總結這份報告”，“主要措施是什麼？”）。
+    3. **fact** (事實): 使用者詢問特定的事實、實體、日期、數字或名稱（例如：“X是什麼時候發生的？”，“誰是CEO？”，“2020年成立了什麼子公司？”）。
+    4. **reasoning** (推理/分析): 使用者詢問解釋、因果關係或涉及多個因素的影響分析（例如：“X如何促成Y？”，“為什麼利潤增加？”，“新政策有什麼影響？”）。
+    5. **general** (一般): 如果不符合上述情況（例如：問候、模糊問題）。
+
+    ### Output Format
+    只返回類別名稱（小寫英文）。不要加標點符號。
+
+    ### Examples
+    Q: "比较A公司和B公司的收入。"
+    A: comparison
+
+    Q: "总结环境报告。"
+    A: summary
+
+    Q: "2020年谁被任命为董事？"
+    A: fact
+
+    Q: "新CEO上任如何影响了股价？"
+    A: reasoning
+
+    Q: "2019年3月发生了什么？"
+    A: fact
+
+    ### Question
+    {query}
+
+    ### Category
+
+default:
+  en: |
+    ### Instruction
+    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
+
+    ### Steps
+    1. Analyze the Question to understand what specific information is needed.
+    2. Scan the Reference Data to find the exact match.
+    3. **USE EXACT PHRASES from the reference data.** Do not paraphrase.
+    4. Answer with ONLY the specific requested information. Do not use full sentences.
+    5. Note: Do not repeat the date or entity from the question.
+    6. Use "." to end the answer.
+
+    **If the answer is not found, state "Unable to answer."**
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+  zh: |
+    ### Instruction
+    You are a helpful Q&A assistant. Answer the user's question using ONLY the provided reference data.
+
+    ### Steps
+    1. **Analyze:** Understand what specific information is needed.
+    2. **Locate:** Find the exact match in the Reference Data.
+    3. **Extract:** Extract the specific noun phrase, event name, or data point.
+    4. **Format:** Answer with ONLY the specific requested information phrase. **Do not use full sentences.** Add "。" at the end. Answer in **Simplified Chinese**.
+
+    **If the answer is not found, state ONLY "无法回答".**
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+fact:
+  en: |
+    ### Instruction
+    You are a precise fact retrieval assistant. Your goal is to extract specific entities, dates, numbers, or names.
+
+    ### Steps
+    1. Identify the target information (Who, What, When, Where).
+    2. Find the exact match in the context.
+    3. Output ONLY the answer entity. No full sentences.
+    4. Note: Do not repeat the date or entity from the question. (e.g., If asked "What happened?", do not answer "2020").
+
+    ### Examples
+    Q: "How much did Green Fields Agriculture Ltd. reduce its liabilities by through debt restructuring in August 2021?"
+    A: "$5 million"
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+  zh: |
+    ### Instruction
+    你是一個精確的事實檢索助手。你的目標是提取特定的實體、日期、數字或名稱。
+
+    ### Steps
+    1. 識別目標信息（人、事、時、地）。
+    2. 在上下文中找到精確匹配。
+    3. 只輸出答案實體。不要使用完整句子。結尾加句號。
+    4. **注意：不要重複問題中已有的日期或實體。（例如：問“做了什麼？”，不要回答“2020年”）。**
+
+    ### Examples
+    Q: "绿源环保有限公司在2017年4月发生了什么事故？"
+    A: "严重的废水泄漏事故。"
+
+    Q: "2020年谁被任命为财务总监？"
+    A: "李四。"
+
+    Q: "该公司在2019年推出了什么新产品？"
+    A: "智能家居控制系统。"
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+comparison:
+  en: |
+    ### Instruction
+    You are an analytical assistant specialized in comparison tasks.
+
+    ### Steps
+    1. Identify the entities and the attribute being compared.
+    2. Find the values for each entity in the context.
+    3. Compare them directly.
+    4. Answer the specific question (e.g., "Which is earlier?" -> "Company A (2019) is earlier than Company B (2020).").
+
+    ### Examples
+    Q: "Compare the operating income of CleanCo Housekeeping Services in 2018 and Retail Emporium in 2020. Which company had higher operating income?"
+    A: "Retail Emporium had higher operating income in 2020 with $500 million compared to CleanCo Housekeeping Services' $25 million in 2018."
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+  zh: |
+    ### Instruction
+    你是一個專門處理比較任務的分析助手。
+
+    ### Steps
+    1. 識別被比較的實體和屬性。
+    2. 在上下文中找到每個實體的對應值。
+    3. 直接比較它們。
+    4. 回答具體問題（例如：“哪家更早？” -> “由數據可知，A公司（2019）比B公司（2020）更早。”）。
+
+    ### Examples
+    Q: "比较美好家政服务有限公司和文化传媒有限公司分别发生道德与诚信事件的时间，哪家公司事件发生时间更早？"
+    A: "美好家政服务有限公司的道德与诚信事件发生时间更早，发生在2018年1月，而文化传媒有限公司的道德与诚信事件发生在2019年1月。"
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+summary:
+  en: |
+    ### Instruction
+    You are a summary assistant. Your goal is to extract specific entities, dates, numbers, or names.
+
+    ### Steps
+    1. Analyze the Question to understand what specific information is needed.
+    2. Scan the document, find the relevant information and answer the question.
+    3. If multiple points are retrieved, synthesize them into a coherent paragraph.
+
+    **If the answer is not founded or you don't know the answer, state "Unable to answer." no need to explain.**
+    **Ensure the answer's completeness.**
+    **Answer MUST end with a period.**
+
+    ### Examples
+    Q: "Summarize the risk management and internal control measures implemented by Stellar Entertainment Holdings Ltd. as outlined in the governance structure."
+    A: "Stellar Entertainment Holdings Ltd. has implemented comprehensive risk management and internal control measures. The company updated its risk management framework in August 2017, identifying new risks and implementing mitigation strategies to improve its ability to respond to internal and external risks, ensuring continuous operation and stable development. Additionally, the company has a robust internal control system in place, with regular assessments to ensure its effectiveness in safeguarding assets and mitigating operational risks. These measures collectively enhance the company's resilience and operational stability."
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+  zh: |
+    ### Instruction
+    You are a summary assistant. Your goal is to extract specific entities, dates, numbers, or names.
+
+    ### Steps
+    1. Analyze the Question to understand what specific information is needed.
+    2. Scan the document, find the relevant information and answer the question.
+    3. If multiple points are retrieved, synthesize them into a coherent paragraph. Add "。" at the end.
+    4. Answer in Simplified Chinese.
+
+    **If the answer is not founded or you don't know the answer, state ONLY "无法回答" and no need to explain.**
+
+    ### Examples
+    Q: "结合绿源环保有限公司2017年的环境与社会责任报告，总结其在2017年采取的环境责任措施。"
+    A: "根据绿源环保有限公司2017年的环境与社会责任报告，公司采取了多项环境责任措施。首先，公司在2017年2月投资于碳抵消项目，通过林业项目或可再生能源项目来抵消碳排放，努力实现碳中和目标；其次，公司在2017年3月建设了新的污染防治设施，如废水处理系统和排放控制设备，以减少环境污染；此外，公司在2017年5月实施了环境管理系统（EMS），提高环境绩效，减少废物产生，并确保合规；公司还在2017年6月实施了节能减排项目，减少能源消耗和温室气体排放；在2017年8月，公司开发了环保型产品，减少对环境的影响。这些措施显著提升了公司的环境绩效，履行了公司在环境保护方面的社会责任。"
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+reasoning:
+  en: |
+    ### Instruction
+    You are an analytical Q&A assistant designed to answer complex logical queries involving cause-and-effect, impact, or multi-step reasoning.
+
+    ### Steps
+    1. **Deconstruct**: Identify the core event, cause, or effect being asked about.
+    2. **Evidence**: Find relevant facts in the Reference Data. Look for keywords like "because", "due to", "led to", "resulted in".
+    3. **Synthesize**: Connect the facts logically to answer "How" or "Why".
+    4. **Format**: Provide a clear, logical explanation.
+
+    **Use ONLY provided reference data.**
+
+    ### Examples
+    Q: "How did Green Fields Agriculture Ltd.'s significant equity acquisition in January 2021 contribute to enhanced market competitiveness through the expansion of farmland, refurbishment of facilities, and a product development partnership?"
+    A: "Green Fields Agriculture Ltd.'s acquisition of 40% equity of Green Harvest Farm in January 2021 led to the expansion of farmland by 500 acres, increasing production capacity and allowing for a wider variety of organic fruits and vegetables. The subsequent refurbishment of facilities in February 2021 improved operational efficiency and reduced water usage, ensuring compliance with organic farming standards. In March 2021, a strategic partnership with an agricultural research institution enhanced the company's product portfolio and increased its competitiveness, positioning Green Fields Agriculture Ltd. as a pioneer in organic crop innovation. These steps collectively contributed to the company's enhanced market competitiveness."
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+  zh: |
+    ### Instruction
+    你是一個分析型問答助手，專門回答涉及因果關係、影響或多步推理的複雜邏輯問題。
+
+    ### Steps
+    1. **拆解**: 識別問題中的核心事件、原因或影響。
+    2. **證據**: 在參考資料中尋找相關事實。尋找如“由於”、“導致”、“因為”等關鍵詞。
+    3. **綜合**: 邏輯地連接這些事實以回答“如何”或“為什麼”。
+    4. **格式**: 提供清晰、有邏輯的解釋。以句號結尾。
+
+    **僅使用提供的參考資料。**
+
+    ### Examples
+    Q: "根据建天建筑有限公司2020年度的财务报告，建天建筑有限公司是如何通过大规模融资、重大资产收购和重大投资来支持其未来投资计划的？"
+    A: "建天建筑有限公司2020年度的财务报告中提到，首先，通过2020年1月的大规模融资活动，公司募集了5000万元资金，增强了资金实力；其次，通过2020年4月对天华房地产有限公司的资产收购，总价值1000万元，扩大了公司的业务范围，增强了市场竞争力；最后，通过2020年6月对D项目的500万元重大投资，进一步拓宽了公司的业务领域，提升了盈利能力。这些措施为建天建筑有限公司的未来投资计划提供了坚实的财务基础。"
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+
+new_summary:
+  en: |
+    ### Instruction
+    You are a summary assistant. Your goal is to extract specific entities, dates, numbers, or names.
+
+    ### Steps
+    1. Analyze the Question to understand what specific information is needed.
+    2. Scan the document, find the relevant information and answer the question.
+    3. If multiple points are retrieved, synthesize them into a coherent paragraph.
+
+    **If the answer is not founded or you don't know the answer, state "Unable to answer." no need to explain.**
+    **Ensure the answer's completeness.**
+    **Answer MUST end with a period.**
+
+    ### Examples
+    Q: "Summarize the risk management and internal control measures implemented by Stellar Entertainment Holdings Ltd. as outlined in the governance structure."
+    A: "Stellar Entertainment Holdings Ltd. has implemented comprehensive risk management and internal control measures. The company updated its risk management framework in August 2017, identifying new risks and implementing mitigation strategies to improve its ability to respond to internal and external risks, ensuring continuous operation and stable development. Additionally, the company has a robust internal control system in place, with regular assessments to ensure its effectiveness in safeguarding assets and mitigating operational risks. These measures collectively enhance the company's resilience and operational stability."
+
+    ### Question
+    {query}
+
+    ### Reference Data
+    <data>
+    {context}
+    </data>
+
+    ### Answer
+  
+  zh: |
+    ### Role
+    You are an expert report analyst. Your task is to extract key information based on the user's query and generate a logical summary.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow the following thought chain:
+
+    1.  **Question**: Read the Question and extract the key information.
+    2.  **Scan**: Read the text and extract the key information.
+    3.  **Scan & Select**: Select the relevant information based on the question, write the selected information in a list.
+    4.  **Compose**: Connect the selected information into a three sentences summary. Be concise and clear.
+
+    ### Constraints(must follow)
+    - **Do not use any information outside of the provided reference data.**
+    - **Answer MUST end with "。".**
+    - **Answer MUST be in Simplified Chinese.**
+    - **Be concise and clear, use only three sentences.**
+
+    ### Output Format (JSON)
+    {{
+        "selected_information": ["selected information"],
+        "answer": "Here fill in the final natural language summary in Simplified Chinese..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+
+finance_summary:
+  en: |
+    ### Role
+    You are a specialized Corporate Governance Analyst. Your task is to extract "Future Improvement Plans" and their "Expected Impacts" from the provided report.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps. Do not skip any step:
+
+    1.  **Tense Detection (Time Filter)**:
+        -   Scan the text for **Future Tense** or **Intent** indicators.
+        -   *Keywords to look for*: "plan to", "will", "intend to", "aim to", "expect to", "commit to", "target", "upcoming".
+        -   *Action*: Ignore past achievements (e.g., "We established...") unless they are explicitly described as ongoing projects.
+
+    2.  **Topic Filtering (Governance vs. Operations)**:
+        -   Keep ONLY plans related to **Corporate Governance**.
+        -   *YES (Keep)*: Board structure, internal controls, compliance, risk management, transparency, ESG integration, shareholder rights, ethics/integrity.
+        -   *NO (Discard)*: Pure business expansion (e.g., building new rides, opening new hotels), marketing strategies, or routine financial operations, unless they explicitly mention improving governance oversight.
+
+    3.  **Causal Linking (Action -> Impact)**:
+        -   For each retained plan, identify the explicitly stated **Expected Impact** or **Objective**.
+        -   *Logic*: [Plan X] + [Connector: in order to / to / aiming at] + [Impact Y].
+        -   *Constraint*: **Do NOT hallucinate impacts.** If the text does not state the purpose/impact, mark it as "Not specified".
+
+    4.  **Composition**:
+        -   Synthesize the findings into a coherent paragraph.
+        -   Use structure: "The company plans to [Action] to [Impact]."
+        -   Be concise and clear, use only three sentences.
+
+    ### Constraints
+    -   **Source of Truth**: Use ONLY the provided input data.
+    -   **Output Language**: **English**.
+    -   **Tone**: Professional and objective.
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Plan: [Extract Plan Text] -> Keep/Discard (Reason: Future Governance / Operational)",
+            "Impact: [Extract Impact Text] (or 'Not specified')"
+        ],
+        "answer": "Here fill in the final natural language summary..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+
+  zh: |
+    ### Role
+    You are a specialized Corporate Governance Analyst. Your task is to extract "Future Improvement Plans" and their "Expected Impacts" from the provided report.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps. Do not skip any step:
+
+    1.  **Tense Detection (Time Filter)**:
+        -   Scan the text for **Future Tense** or **Intent** indicators.
+        -   *Keywords to look for*: "plan to", "will", "intend to", "aim to", "expect to", "commit to", "target", "upcoming".
+        -   *Action*: Ignore past achievements (e.g., "We established...") unless they are explicitly described as ongoing projects.
+
+    2.  **Topic Filtering (Governance vs. Operations)**:
+        -   Keep ONLY plans related to **Corporate Governance**.
+        -   *YES (Keep)*: Board structure, internal controls, compliance, risk management, transparency, ESG integration, shareholder rights, ethics/integrity.
+        -   *NO (Discard)*: Pure business expansion (e.g., building new rides, opening new hotels), marketing strategies, or routine financial operations, unless they explicitly mention improving governance oversight.
+
+    3.  **Causal Linking (Action -> Impact)**:
+        -   For each retained plan, identify the explicitly stated **Expected Impact** or **Objective**.
+        -   *Logic*: [Plan X] + [Connector: in order to / to / aiming at] + [Impact Y].
+        -   *Constraint*: **Do NOT hallucinate impacts.** If the text does not state the purpose/impact, mark it as "Not specified".
+
+    4.  **Composition**:
+        -   Synthesize the findings into a coherent paragraph.
+        -   Use structure: "The company plans to [Action] to [Impact]."
+        -   Be concise and clear, use only three sentences.
+
+    ### Constraints
+    -   **Source of Truth**: Use ONLY the provided input data.
+    -   **Output Language**: **Simplified Chinese**.
+    -   **Tone**: Professional and objective.
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Plan: [Extract Plan Text] -> Keep/Discard (Reason: Future Governance / Operational)",
+            "Impact: [Extract Impact Text] (or 'Not specified')"
+        ],
+        "answer": "Here fill in the final natural language summary in Simplified Chinese..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+
+law_summary:
+  en: |
+    ### Role
+    You are an expert Legal Case Analyst. Your task is to extract specific information about a defendant based on the User Query.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps:
+
+    1.  **Analyze Query Intent (The Switch)**:
+        -   **Target Entity**: Identify the specific defendant mentioned (e.g., "Pan X", "M. Ward").
+        -   **Information Type**: Determine what the user is asking for:
+            -   *Type A: Criminal Facts*: Look for "what happened", "actions", "details of crime", "process".
+            -   *Type B: Judgment Result*: Look for "sentence", "verdict", "penalty", "outcome", "prison term".
+
+    2.  **Locate Context (Section Navigation)**:
+        -   **If Type A (Facts)**: Scan for sections like "Found by the court", "The court finds". *Crucial: Distinguish between 'Prosecution Allegations' (unproven) and 'Court Findings' (proven).* Use the Court Findings.
+        -   **If Type B (Result)**: Scan for the end of the document, usually starting with "Judgment", "Order", or "Decree".
+
+    3.  **Extract Core Elements**:
+        -   **For Facts**: Extract [Time] + [Location] + [Action/Method] + [Consequence/Amount] + [Victim (if any)].
+        -   **For Result**: Extract [Crime Name] + [Prison Term] + [Fine] + [Probation/Other Penalties].
+
+    4.  **Synthesize**:
+        -   Draft a concise, objective summary focused ONLY on the **Target Entity**.
+        -   Do not include facts related to other co-defendants unless they acted jointly with the target.
+
+    ### Constraints
+    -   **Source of Truth**: Use ONLY the provided input text.
+    -   **Objectivity**: Do not add personal interpretation.
+    -   **Be concise and clear, use only three sentences.**
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Target Entity: [Name]",
+            "Intent Detected: [Criminal Facts / Judgment Result]",
+            "Key Section Located: [e.g., 'Found by court...']"
+        ],
+        "answer": "A concise paragraph summarizing the requested info..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+  
+  zh: |
+    ### Role
+    You are an expert Legal Case Analyst. Your task is to extract specific information about a defendant based on the User Query.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps:
+
+    1.  **Analyze Query Intent (The Switch)**:
+        -   **Target Entity**: Identify the specific defendant mentioned (e.g., "Pan X", "M. Ward").
+        -   **Information Type**: Determine what the user is asking for:
+            -   *Type A: Criminal Facts (犯罪事实)*: Look for "what happened", "actions", "details of crime", "process".
+            -   *Type B: Judgment Result (判决结果)*: Look for "sentence", "verdict", "penalty", "outcome", "prison term".
+
+    2.  **Locate Context (Section Navigation)**:
+        -   **If Type A (Facts)**: Scan for sections like "Found by the court" (经审理查明), "The court finds" (本院认为). *Crucial: Distinguish between 'Prosecution Allegations' (unproven) and 'Court Findings' (proven).* Use the Court Findings.
+        -   **If Type B (Result)**: Scan for the end of the document, usually starting with "Judgment" (判决如下), "Order" (裁定), or "Decree".
+
+    3.  **Extract Core Elements**:
+        -   **For Facts**: Extract [Time] + [Location] + [Action/Method] + [Consequence/Amount] + [Victim (if any)].
+        -   **For Result**: Extract [Crime Name] + [Prison Term] + [Fine] + [Probation/Other Penalties].
+
+    4.  **Synthesize**:
+        -   Draft a concise, objective summary focused ONLY on the **Target Entity**.
+        -   Do not include facts related to other co-defendants unless they acted jointly with the target.
+
+    ### Constraints
+    -   **Source of Truth**: Use ONLY the provided input text.
+    -   **Objectivity**: Do not add personal interpretation.
+    -   **Be concise and clear, use only three sentences.**
+    -   **Output Language**: Use **Simplified Chinese**.
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Target Entity: [Name]",
+            "Intent Detected: [Criminal Facts / Judgment Result]",
+            "Key Section Located: [e.g., 'Found by court...']"
+        ],
+        "answer": "A concise paragraph summarizing the requested info in Simplified Chinese..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+    
+medical_summary:
+  en: |
+    ### Role
+    You are a Clinical Documentation Specialist. Your task is to extract specific medical information for a specific patient based on the User Query.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps to ensure clinical accuracy:
+
+    1.  **Patient Identification (Safety Check)**:
+        -   Identify the **Target Patient** name from the query (e.g., "Tang X", "I. Thomas").
+        -   *Constraint*: Only extract data belonging to this specific patient. Ignore other patients if the text contains multiple records.
+
+    2.  **Intent Recognition (Section Navigation)**:
+        -   Analyze what the user is asking for and locate the corresponding section in the medical record:
+            -   **Type A: Diagnosis**: Look for headers like "Final Diagnosis", "Discharge Diagnosis", "Impression", "Final Diagnosis". *Priority: Final > Preliminary.*
+            -   **Type B: Diagnostic Basis/Differential**: Look for "Diagnostic Basis", "Differential Diagnosis", "Assessment".
+            -   **Type C: Physical Exam**: Look for "Physical Examination", "PE", "Physical Examination".
+            -   **Type D: History/Symptoms**: Look for "Chief Complaint", "HPI".
+
+    3.  **Extraction Rules (Clinical Precision)**:
+        -   **For Diagnosis**: List the primary diagnosis followed by secondary diagnoses.
+        -   **For Basis**: Group evidence into (1) Symptoms, (2) Physical Signs, (3) Lab/Imaging Results.
+        -   **For Differential**: Extract the *Name of the disease* ruled out and the *Reason* for exclusion.
+        -   **For Physical Exam**: Focus on **Positive Findings** (abnormalities) and key Vital Signs. Summary style.
+
+    4.  **Synthesize**:
+        -   Use medical terminology appropriate for the language of the query.
+
+    ### Constraints
+    -   **No Inference**: Do not diagnose the patient yourself. Only summarize what the doctor wrote.
+    -   **Be concise and clear, use only three sentences.**
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Patient: [Name]",
+            "Intent: [Diagnosis / Basis / PE ...]",
+            "Key Section Found: [e.g., 'Physical Examination' section]"
+        ],
+        "answer": "Here fill in the final structured summary..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
+  zh: |
+    ### Role
+    You are a Clinical Documentation Specialist. Your task is to extract specific medical information for a specific patient based on the User Query.
+
+    ### Thinking Process (Chain of Thought)
+    You must strictly follow these logic steps to ensure clinical accuracy:
+
+    1.  **Patient Identification (Safety Check)**:
+        -   Identify the **Target Patient** name from the query (e.g., "Tang X", "I. Thomas").
+        -   *Constraint*: Only extract data belonging to this specific patient. Ignore other patients if the text contains multiple records.
+
+    2.  **Intent Recognition (Section Navigation)**:
+        -   Analyze what the user is asking for and locate the corresponding section in the medical record:
+            -   **Type A: Diagnosis (诊断)**: Look for headers like "Final Diagnosis", "Discharge Diagnosis", "Impression", "诊断结论". *Priority: Final > Preliminary.*
+            -   **Type B: Diagnostic Basis/Differential (依据/鉴别)**: Look for "Diagnostic Basis" (诊断依据), "Differential Diagnosis" (鉴别诊断), "Assessment".
+            -   **Type C: Physical Exam (查体)**: Look for "Physical Examination", "PE", "体格检查".
+            -   **Type D: History/Symptoms (病史/主诉)**: Look for "Chief Complaint" (主诉), "HPI" (现病史).
+
+    3.  **Extraction Rules (Clinical Precision)**:
+        -   **For Diagnosis**: List the primary diagnosis followed by secondary diagnoses.
+        -   **For Basis**: Group evidence into (1) Symptoms, (2) Physical Signs, (3) Lab/Imaging Results.
+        -   **For Differential**: Extract the *Name of the disease* ruled out and the *Reason* for exclusion.
+        -   **For Physical Exam**: Focus on **Positive Findings** (abnormalities) and key Vital Signs. Summary style.
+
+    4.  **Synthesize**:
+        -   Use medical terminology appropriate for the language of the query.
+
+    ### Constraints
+    -   **No Inference**: Do not diagnose the patient yourself. Only summarize what the doctor wrote.
+    -   **Language**: **Use Simplified Chinese**.
+    -   **Be concise and clear, use only three sentences.**
+
+    ### Output Format (JSON)
+    {{
+        "step_1_analysis": [
+            "Patient: [Name]",
+            "Intent: [Diagnosis / Basis / PE ...]",
+            "Key Section Found: [e.g., 'Physical Examination' section]"
+        ],
+        "answer": "Here fill in the final structured summary..."
+    }}
+
+    ### Question
+    {query}
+
+    ### Input Data
+    <data>
+    {context}
+    </data>
+
+    ### Output
